@@ -3,4 +3,4 @@ project(AAA)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(AAA main.cpp joker.cpp joker.h)
+add_executable(AAA main.cpp joker.cpp joker.h card.cpp card.h player.cpp player.h dealer.cpp dealer.h)
