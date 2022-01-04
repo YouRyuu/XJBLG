@@ -98,7 +98,7 @@ private:
     int rank;       //牌的大小
 };
 
-class Player        //赌徒
+class Player:public std::enable_shared_from_this<Player>        //赌徒
 {
     /*
      * 玩家类，代表某一个玩家，拥有昵称、一副手牌：用一个vector表示拥有的三张牌
@@ -152,7 +152,13 @@ public:
         return state;
     }
 
-    //被动操作；拿到牌后一定会执行的操作
+    //被动操作；一定会执行的操作
+
+    void getCard(Card _card)     //获取一张牌
+    {
+        cards.push_back(_card);
+        state=pblind;       //拿到牌后默认暂时未看牌
+    }
 
     void sortPlayerCards()      //对玩家的手牌进行大小排序,先看牌面值，如果牌面值相等就比较花色，从小到大排序
     {
@@ -189,20 +195,14 @@ public:
 
     //主动操作
 
-    void setDown(Dealer& dealer);
+    void setDown(Dealer& dealer);       //找到牌桌坐下
 
-    void leave(Dealer& dealer);
-
-    void getCard(Card _card)     //获取一张牌
-    {
-        cards.push_back(_card);
-        state=pblind;       //拿到牌后默认暂时未看牌
-    }
+    void leave(Dealer& dealer);         //离开牌桌，这个函数只能在玩家处于pwait或者palready状态时候才能调用
 
     void discard()     //弃牌: 1.玩家自己主动弃牌；2.在对局结束后，由洗牌函数调用
     {
         cards.clear();
-        state=pfold;        //状态变为弃牌
+        state=palready;        //状态变为弃牌。
     }
 
     void showPlayerCards()      //输出玩家的手牌
@@ -216,42 +216,13 @@ public:
         cout<<"\trank:"<<rank<<endl;
     }
 
-    void compareWithOther(Player& op)
-    {
-        /*只能和已经看牌的人比牌
-         * 比完牌后，如果this的牌面值小于op的牌面值，则this弃牌，反之op弃牌
-        */
-        state=pknow;        //状态变为已看牌
-        //和另一位玩家比牌
-        if(op.getState()!=pknow)        //该玩家未看牌
-        {
-            cout<<op.getName()<<"未看牌，无法和他比牌"<<endl;
-        }
-        else if(op.getState()==pwait || op.getState()==pfold)
-        {
-            cout<<op.getName()<<"无手牌，无法和他比牌"<<endl;
-        }
-        else
-        {
-            if(*this<op)
-            {
-                cout<<nickname<<"没有"<<op.getName()<<"的大！"<<endl;
-                discard();
-            }
-            else
-            {
-                cout<<nickname<<"比"<<op.getName()<<"的大！"<<endl;
-                op.discard();
-            }
-        }
-    }
+    CompareResult compareWithOther(Player& op, Dealer& dealer);     //和另外一个人比牌
 
 private:
     int rank;   //手牌的权重值rank，用来比较牌面大小
     string nickname;  //玩家昵称
     vector<Card> cards;     //拥有的三张牌,按照升序排序：5QA
     PlayerState state;      //所处状态
-    //shared_ptr<Dealer> myDealer;        //当前所处的牌桌
 };
 
 
@@ -320,24 +291,24 @@ public:
             }
             player->sortPlayerCards();
             player->figureRank();
-            player->showPlayerCards();      //TODO:测试：输出玩家手中的牌，实际应该在玩家主动调用看牌操作时或者对后比牌的时候调用
+            //player->showPlayerCards();      //TODO:测试：输出玩家手中的牌，实际应该在玩家主动调用看牌操作时或者对后比牌的时候调用
         }
     }
 
-    void addPlayer(shared_ptr<Player>& _player)
+    void addPlayer(shared_ptr<Player> _player)
     {
         //增加玩家,最多17名玩家,某位玩家坐在了这个牌桌
         if(players.size()<=17)
         {
             players.push_back(_player);
+            _player->setState(palready);
             //_player->setDown(static_cast<shared_ptr<Dealer>>(this));
         }
-
         else
             cout<<"玩家数量过多"<<endl;
     }
 
-    int deletePlayer(shared_ptr<Player>& _player)
+    bool deletePlayer(shared_ptr<Player> _player)
     {
         //移除掉某个玩家
         for(vector<shared_ptr<Player>>::iterator it=players.begin();it!=players.end();it++)
@@ -346,28 +317,67 @@ public:
             {
                 (*it)->setState(pwait);
                 players.erase(it);
-                return 0;
+                return true;
             }
         }
-        return 1;
+        return false;
     }
 
-    bool compareTwoPlayers(shared_ptr<Player>& p1, shared_ptr<Player>& p2)
+    CompareResult compareTwoPlayers(shared_ptr<Player> p1, shared_ptr<Player> p2)
     {
         //两个玩家之间的牌面值比较
         //如果p1比p2大，返回1， 反之返回0
-        if(*p1<*p2)
-            return false;
+        /*
+         * 两个玩家比牌的可能性：
+         * 1.两个玩家都看牌了，互相比较  p1.state==p2.state==pknow
+         * 2.两个玩家都没有看牌，直接蒙开
+         * 看了牌的玩家不可以和没有看牌的玩家比牌
+         * 不管什么情况最后的牌都是看了的
+         * 这里默认p1是主动发起看牌的一方，p2是被看牌的一方
+         */
+        //p1->setState(pknow);        //状态变为已看牌
+        //和另一位玩家比牌
+        if(p1->getState()==pknow && p2->getState()!=pknow)        //自己已经看牌了但是对方没有看牌，拒绝操作
+        {
+            cout<<p2->getName()<<"未看牌，无法和他比牌"<<endl;
+            return error;
+        }
+        else if((p1->getState()==p2->getState()) && (p2->getState()==pknow)||(p2->getState()==pblind))
+        {
+            //两人均看牌了或者两者均未看牌
+            p1->setState(pknow);        //现在均看牌了
+            p2->setState(pknow);
+            if(*p1<*p2)     //谁输了谁弃牌
+            {
+                p1->discard();
+                return fault;
+            }
+            else
+            {
+                p2->discard();
+                return win;
+            }
+        }
         else
-            return true;
+            return error;
     }
 
-    void printAllPlayers()
+    void showAllPlayers()
     {
         //输出当前牌桌的所有玩家
         for(auto & player : players)
         {
             cout<<player->getName()<<endl;
+        }
+    }
+
+    void showEffectivePlayers()
+    {
+        //输出仍持有手牌的玩家信息
+        for(auto &player:players)
+        {
+            if(player->getState()!=pwait && player->getState()!=palready)
+                player->showPlayerCards();
         }
     }
 
@@ -379,29 +389,118 @@ public:
     }
 
 private:
-    vector<shared_ptr<Player>> players;     //当前的所有玩家
+    vector<shared_ptr<Player>> players;     //当前牌桌的所有玩家
+    //vector<shared_ptr<Player>> activePlayers;       //当前手牌在手的玩家
     int used[52];       //一个荷官有一副牌,记录牌是否已经发出去了，0代表没发，1代表已经发出去了
 };
 
+
+
 void Player::setDown(Dealer &dealer)
 {
-    dealer.addPlayer();
+    dealer.addPlayer(shared_from_this());
+    //dealer.addPlayer( static_cast<shared_ptr<Player>>(this));
+}
+
+void Player::leave(Dealer &dealer)
+{
+    dealer.deletePlayer(shared_from_this());
+}
+
+CompareResult Player::compareWithOther(Player &op, Dealer &dealer)
+{
+    return dealer.compareTwoPlayers(this->shared_from_this(), op.shared_from_this());
+}
+
+void playerMenu(shared_ptr<Player>player, Dealer& dealer)
+{
+    /*
+     * 玩家的操作菜单
+     * 要根据玩家现在的状态来选择操作：
+     * pwait:找桌子坐下setDown();
+     * palready:离开此牌桌leave();
+     * pblind:看牌showPlayerCard()、跟人比牌compareWithOther()、下注
+     * pknow:跟人比牌compareWithOther()、弃牌discard()、下注
+     */
+    cout<<"请选择操作"<<endl;
+    PlayerState state = player->getState();
+    switch(state)
+    {
+        case pwait:cout<<"1.就座"<<endl;break;
+        case palready:cout<<"1.离开"<<endl;break;
+        case pblind:cout<<"1.看牌\t2.比牌\t3.下注";break;
+        case pknow:cout<<"1.比牌\t2.下注\t3.弃牌";break;
+        default:cout<<"欢迎来到CPNP club！"<<endl;break;
+    }
+    int no;
+    cin>>no;
+    switch(no)
+    {
+        case 1:
+        {
+            if(state==pwait)
+            {
+                player->setDown(dealer);
+            }
+            else if(state==palready)
+            {
+                player->leave(dealer);
+            }
+            else if(state==pblind)
+            {
+                player->showPlayerCards();
+            }
+            else
+            {
+                cout<<"选择了比牌"<<endl;
+            }
+            break;
+        }
+        case 2:
+        {
+            if(state==pblind)
+            {
+                cout<<"选择了比牌"<<endl;
+            }
+            else if(state==pknow)
+            {
+                cout<<"选择了下注"<<endl;
+            }
+            else
+            {
+                cout<<"无效操作"<<endl;
+            }
+            break;
+        }
+        case 3:
+        {
+            if(state==pblind)
+            {
+                cout<<"选择了下注"<<endl;
+            }
+            else if(state==pknow)
+            {
+                player->discard();
+            }
+            else
+            {
+                cout<<"无效操作"<<endl;
+            }
+            break;
+        }
+        default:break;
+    }
 }
 
 void test()
 {
-    shared_ptr<Player> p1= make_shared<Player>("卢本伟");
-    shared_ptr<Player> p2= make_shared<Player>("马飞飞");
-    shared_ptr<Player> p3= make_shared<Player>("刘某人");
-    shared_ptr<Player> p4= make_shared<Player>("内卷王");
-    shared_ptr<Player> p5= make_shared<Player>("汉堡包");
     Dealer dealer;
-    dealer.addPlayer(p1);
-    dealer.addPlayer(p2);
-    dealer.addPlayer(p3);
-    dealer.addPlayer(p4);
-    dealer.addPlayer(p5);
-    dealer.dealCards();
-    dealer.deletePlayer(p2);
-    dealer.printAllPlayers();
+    shared_ptr<Player> p1(new Player("卢本伟"));
+    shared_ptr<Player> p2(new Player("马飞飞"));
+    shared_ptr<Player> p3(new Player("刘某人"));
+    shared_ptr<Player> p4(new Player("内卷王"));
+    shared_ptr<Player> p5(new Player("汉堡包"));
+    playerMenu(p1, dealer);
+    playerMenu(p2, dealer);
+    playerMenu(p3, dealer);
 }
