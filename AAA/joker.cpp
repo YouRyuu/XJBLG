@@ -247,6 +247,7 @@ public:
 
     Card dealACard()        //发一张牌
     {
+        //此函数只能由dealcards函数调用
         Card card;
         srand(time(nullptr));      //生成一个随机数
         while(true)
@@ -291,12 +292,13 @@ public:
             }
             player->sortPlayerCards();
             player->figureRank();
-            //player->showPlayerCards();      //TODO:测试：输出玩家手中的牌，实际应该在玩家主动调用看牌操作时或者对后比牌的时候调用
+            player->showPlayerCards();      //TODO:测试：输出玩家手中的牌，实际应该在玩家主动调用看牌操作时或者对后比牌的时候调用
         }
     }
 
     void addPlayer(shared_ptr<Player> _player)
     {
+        //此函数由玩家setdown函数调用
         //增加玩家,最多17名玩家,某位玩家坐在了这个牌桌
         if(players.size()<=17)
         {
@@ -310,6 +312,7 @@ public:
 
     bool deletePlayer(shared_ptr<Player> _player)
     {
+        //此函数由玩家leave函数调用或者dealer主动踢人。
         //移除掉某个玩家
         for(vector<shared_ptr<Player>>::iterator it=players.begin();it!=players.end();it++)
         {
@@ -365,6 +368,7 @@ public:
     void showAllPlayers()
     {
         //输出当前牌桌的所有玩家
+        cout<<"当前牌桌所有玩家："<<endl;
         for(auto & player : players)
         {
             cout<<player->getName()<<endl;
@@ -374,6 +378,7 @@ public:
     void showEffectivePlayers()
     {
         //输出仍持有手牌的玩家信息
+        cout<<"当前牌桌有效玩家:"<<endl;
         for(auto &player:players)
         {
             if(player->getState()!=pwait && player->getState()!=palready)
@@ -500,7 +505,22 @@ void test()
     shared_ptr<Player> p3(new Player("刘某人"));
     shared_ptr<Player> p4(new Player("内卷王"));
     shared_ptr<Player> p5(new Player("汉堡包"));
-    playerMenu(p1, dealer);
-    playerMenu(p2, dealer);
-    playerMenu(p3, dealer);
+    p1->setDown(dealer);
+    p2->setDown(dealer);
+    p3->setDown(dealer);
+    p4->setDown(dealer);
+    p5->setDown(dealer);
+    dealer.dealCards();
+    CompareResult re = dealer.compareTwoPlayers(p1, p2);
+    if(re==win)
+    {
+        p2->leave(dealer);
+    }
+    else if(re==fault)
+        p1->leave(dealer);
+    else
+        cout<<"比牌发生错误"<<endl;
+    dealer.showAllPlayers();
+    dealer.showEffectivePlayers();
+    dealer.compareExistPlayers();
 }
