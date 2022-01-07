@@ -1,5 +1,5 @@
-.idea
-.vscode
-cmake-build-debug
-*.dSYM
+.idea/
+.vscode/
+cmake-build-debug/
+*.dSYM/
 main
