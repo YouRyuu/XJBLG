@@ -12,6 +12,9 @@
 #include <utility>
 #include <vector>
 #include <cmath>
+#include <memory>
+#include <algorithm>
+#include <vector>
 
 class Card;
 class Player;

@@ -110,6 +110,11 @@ public:
         cards.reserve(3);
     }
 
+    ~Player()
+    {
+        cout<<this->getName()<<"析构"<<endl;
+    }
+
     //内置操作
 
     bool operator<(const Player& p2)  const   //两个玩家之间的牌面值比较函数
@@ -235,6 +240,11 @@ public:
     Dealer():used{0}
     {
 
+    }
+
+    ~Dealer()
+    {
+        cout<<"dealer析构"<<endl;
     }
 
     void shuffle()
@@ -395,7 +405,7 @@ public:
 
 private:
     vector<shared_ptr<Player>> players;     //当前牌桌的所有玩家
-    //vector<shared_ptr<Player>> activePlayers;       //当前手牌在手的玩家
+    //vector<shred_ptr<Player>> activePlayaers;       //当前手牌在手的玩家
     int used[52];       //一个荷官有一副牌,记录牌是否已经发出去了，0代表没发，1代表已经发出去了
 };
 
@@ -499,28 +509,29 @@ void playerMenu(shared_ptr<Player>player, Dealer& dealer)
 
 void test()
 {
-    Dealer dealer;
+
     shared_ptr<Player> p1(new Player("卢本伟"));
     shared_ptr<Player> p2(new Player("马飞飞"));
     shared_ptr<Player> p3(new Player("刘某人"));
     shared_ptr<Player> p4(new Player("内卷王"));
     shared_ptr<Player> p5(new Player("汉堡包"));
+    Dealer dealer;
     p1->setDown(dealer);
     p2->setDown(dealer);
     p3->setDown(dealer);
     p4->setDown(dealer);
     p5->setDown(dealer);
     dealer.dealCards();
-    CompareResult re = dealer.compareTwoPlayers(p1, p2);
-    if(re==win)
-    {
-        p2->leave(dealer);
-    }
-    else if(re==fault)
-        p1->leave(dealer);
-    else
-        cout<<"比牌发生错误"<<endl;
-    dealer.showAllPlayers();
-    dealer.showEffectivePlayers();
-    dealer.compareExistPlayers();
+//    CompareResult re = dealer.compareTwoPlayers(p1, p2);
+//    if(re==win)
+//    {
+//        p2->leave(dealer);
+//    }
+//    else if(re==fault)
+//        p1->leave(dealer);
+//    else
+//        cout<<"比牌发生错误"<<endl;
+//    dealer.showAllPlayers();
+//    dealer.showEffectivePlayers();
+//    dealer.compareExistPlayers();
 }
