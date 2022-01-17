@@ -74,6 +74,8 @@ public:
         return loop_;
     }
 
+    void remove();
+
      
 
 private:
@@ -82,6 +84,7 @@ private:
     static const int kWriteEvent;
     void update();
     EventLoop* loop_;
+    bool eventHanding;
     const int fd_;
     int events_;
     int revents_;
