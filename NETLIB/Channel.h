@@ -59,6 +59,11 @@ public:
         update();
     }
 
+    bool isNoneEvent()
+    {
+        return events_==kNoneEvent;
+    }
+
     int index()
     {
         return index_;

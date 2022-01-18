@@ -11,6 +11,14 @@ loop_(loop), eventHanding(false),fd_(fd), events_(0), revents_(0), index_(-1)
 {
 }
 
+Channel::~Channel()
+{
+    if(loop_->hasChannel(this))
+    {
+        remove();
+    }
+}
+
 void Channel::update()
 {
     loop_->updateChannel(this);
