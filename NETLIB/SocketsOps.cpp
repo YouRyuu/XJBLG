@@ -44,7 +44,22 @@ int createNonblockingOrDie(sa_family_t family)
         exit(1);
     }
     return sockfd;
+    #else
+    int sockfd = socket(family, SOCK_STREAM, 0);
+    setNonblockAndCloseOnExec(sockfd);
+    return sockfd;
     #endif
+}
+
+int createBlocking(sa_family_t family)
+{
+    int sockfd = socket(family,SOCK_STREAM, 0);
+    if(sockfd < 0)
+    {
+        std::cout<<"error in create Blocking"<<std::endl;
+        exit(1);
+    }
+    return sockfd;
 }
 
 int connect_(int sockfd, const struct sockaddr* addr)
@@ -77,6 +92,7 @@ int accept_(int sockfd, struct sockaddr_in* addr)
 {
     socklen_t addrlen = static_cast<socklen_t>(sizeof *addr);
     int connfd = accept(sockfd, sockaddr_cast(addr), &addrlen);
+    setNonblockAndCloseOnExec(connfd);
     if(connfd < 0)
     {
         int savedErrno = errno;
