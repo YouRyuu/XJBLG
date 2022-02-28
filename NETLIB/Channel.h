@@ -1,3 +1,6 @@
+#ifndef WS_CHANNEL_H
+#define WS_CHANNEL_H
+
 #include <functional>
 class EventLoop;
 
@@ -96,3 +99,5 @@ private:
     int index_;
     EventCallback eventCallback;
 };
+
+#endif
