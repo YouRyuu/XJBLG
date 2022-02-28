@@ -1,3 +1,6 @@
+#ifndef WS_INETADDRESS_H
+#define WS_INETADDRESS_H
+
 #include <netinet/in.h>
 #include <string>
 
@@ -35,3 +38,5 @@ public:
 private:
     struct sockaddr_in addr_;
 };
+
+#endif
