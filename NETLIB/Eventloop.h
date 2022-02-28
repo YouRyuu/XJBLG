@@ -1,3 +1,6 @@
+#ifndef WS_EVENTLOOP_H
+#define WS_EVENTLOOP_H
+
 #include <sys/types.h>
 #include <pthread.h>
 #include <iostream>
@@ -29,3 +32,5 @@ private:
     ChannelList activeChannels_;
     Channel* currActiveChannel_;  
 };
+
+#endif
