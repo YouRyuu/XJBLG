@@ -4,9 +4,25 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/uio.h>        //readv writev
 #include <iostream>
 
 typedef struct sockaddr SA;
+
+const struct sockaddr* sockaddr_cast(const struct sockaddr_in* addr)
+{
+    return static_cast<const struct sockaddr*>((const void*)addr);
+}
+
+const struct sockaddr_in* sockaddr_in_cast(const struct sockaddr* addr)
+{
+    return static_cast<const struct sockaddr_in*>((const void*)addr);
+}
+
+struct sockaddr* sockaddr_cast(struct sockaddr_in* addr)
+{
+    return static_cast<struct sockaddr*>((void*)addr);
+}
 
 void setNonblockAndCloseOnExec(int sockfd)
 {
@@ -31,11 +47,15 @@ int createNonblockingOrDie(sa_family_t family)
     #endif
 }
 
-int connect(int sockfd, const struct sockaddr* addr);
+int connect_(int sockfd, const struct sockaddr* addr)
+{
+    int connfd = connect(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in)));
+    return connfd;
+}
 
 void bindOrDie(int sockfd, const struct sockaddr* addr)
 {
-    int ret = bind(sockfd, addr, sizeof(struct sockaddr_in));
+    int ret = bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in)));
     if (ret < 0)
     {
         std::cout<<"error in bindOrDie"<<std::endl;
@@ -48,6 +68,7 @@ void listenOrDie(int sockfd)
     int ret = listen(sockfd, SOMAXCONN);
     if(ret < 0)
     {
+        std::cout<<"error in listenOrDie"<<std::endl;
         exit(1);
     }
 }
@@ -55,17 +76,87 @@ void listenOrDie(int sockfd)
 int accept_(int sockfd, struct sockaddr_in* addr)
 {
     socklen_t addrlen = static_cast<socklen_t>(sizeof *addr);
-    int connfd = accept(sockfd, static_cast<struct sockaddr*>((void*)(addr)), &addrlen);
+    int connfd = accept(sockfd, sockaddr_cast(addr), &addrlen);
     if(connfd < 0)
     {
-
+        int savedErrno = errno;
+        switch (savedErrno)
+    {   //  哪些错误是预料之中的
+      case EAGAIN:
+      case ECONNABORTED:
+      case EINTR:
+      case EPROTO:
+      case EPERM:
+      case EMFILE:
+        errno = savedErrno;
+        break;
+      case EBADF:
+      case EFAULT:
+      case EINVAL:
+      case ENFILE:
+      case ENOBUFS:
+      case ENOMEM:
+      case ENOTSOCK:
+      case EOPNOTSUPP:
+        // unexpected errors
+        std::cout << "unexpected error of ::accept " << std::endl;
+        exit(1);
+        break;
+      default:
+        std::cout << "unknown error of ::accept " << std::endl;
+        exit(1);
+        break;
+    }
     }
     return connfd;
 }
 
-ssize_t read(int sockfd, void* buf, size_t size);
-ssize_t write(int sockfd, const void* buf, size_t size);
-void close(int sockfd);
-void shutdownWrite(int sockfd);
-int getSocketError(int sockfd);
-bool isSelfConnect(int sockfd);
+ssize_t read_(int sockfd, void* buf, size_t size)
+{
+    return read(sockfd, buf, size);
+}
+ssize_t write_(int sockfd, const void* buf, size_t size)
+{
+    return write(sockfd, buf, size);
+}
+
+ssize_t readv_(int sockfd, const struct iovec* iov, int iovcount)
+{
+    return readv(sockfd, iov, iovcount);
+}
+
+void close_(int sockfd)
+{
+    int ret = close(sockfd);
+    if(ret<0)
+    {
+        std::cout<<"error in close"<<std::endl;
+    }
+}
+
+void shutdownWrite(int sockfd)
+{
+    if(shutdown(sockfd, SHUT_WR) < 0)
+    {
+        std::cout<<"error in shutdown"<<std::endl;
+    }
+}
+
+int getSocketError(int sockfd)
+{
+    int optval;
+    socklen_t optlen = static_cast<socklen_t>(sizeof optval);
+    if(getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0)
+    {
+        return errno;
+    }
+    else
+    {
+        return optval;
+    }
+}
+
+bool isSelfConnect(int sockfd)
+{
+    return false;
+}
