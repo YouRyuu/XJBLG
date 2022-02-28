@@ -6,7 +6,7 @@ extern const struct sockaddr* sockaddr_cast(const struct sockaddr_in* addr);
 class InetAddress
 {
 public:
-    InetAddress(uint16_t port);
+    InetAddress(uint16_t port=0);
     InetAddress(std::string ip, uint16_t port);
     InetAddress(const struct sockaddr_in& addr):addr_(addr)
     {
@@ -25,6 +25,11 @@ public:
     void setSockAddrInet(const struct sockaddr_in& addr)
     {
         addr_ = addr;
+    }
+
+    const struct sockaddr_in& getSock()
+    {
+        return addr_;
     }
 
 private:
