@@ -1,3 +1,6 @@
+#ifndef WS_EPOLL_H
+#define WS_EPOLL_H
+
 #include <map>
 #include <vector>
 
@@ -24,3 +27,5 @@ private:
     PollfdList pollfds_;
     EventLoop* ownerloop_;
 };
+
+#endif

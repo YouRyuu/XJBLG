@@ -8,6 +8,8 @@ Poller::Poller(EventLoop* loop):ownerloop_(loop)
 {    
 }
 
+Poller::~Poller() = default;
+
 void Poller::poll(ChannelList* activeChannels)
 {
     int numEvents = ::poll(&*pollfds_.begin(), pollfds_.size(), 1000);
