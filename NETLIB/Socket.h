@@ -1,3 +1,6 @@
+#ifndef WS_SOCKET_H
+#define WS_SOCKET_H
+
 class InetAddress;
 struct tcp_info;
 
@@ -36,3 +39,5 @@ class Socket
     private:
         const int sockfd_;
 };
+
+#endif
