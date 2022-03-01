@@ -48,7 +48,7 @@ void Acceptor::handleRead()
         }
         else
         {
-            close(connfd);
+            close_(connfd);
         }
     }
     else        
