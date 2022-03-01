@@ -45,6 +45,11 @@ void EventLoop::loop()
     looping = false;
 }
 
+void EventLoop::runInLoop(Functor cb)
+{
+    cb();
+}
+
 void EventLoop::quit()
 {
     quit_ = true;

@@ -12,6 +12,8 @@ class Poller;
 class EventLoop
 {
 public:
+
+    typedef std::function<void()> Functor;
     EventLoop();
     ~EventLoop();
 
@@ -21,6 +23,7 @@ public:
     void removeChannel(Channel* channel);
     bool hasChannel(Channel* channel);
     void quit();
+    void runInLoop(Functor cb);
 
 private:
     typedef std::vector<Channel *>ChannelList;
