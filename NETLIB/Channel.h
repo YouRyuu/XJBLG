@@ -67,6 +67,10 @@ public:
         return events_==kNoneEvent;
     }
 
+    bool isReading() const {
+        return events_ & kReadEvent;
+    }
+
     int index()
     {
         return index_;
