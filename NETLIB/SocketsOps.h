@@ -19,6 +19,9 @@ void shutdownWrite(int sockfd);
 int getSocketError(int sockfd);
 bool isSelfConnect(int sockfd);
 
+struct sockaddr_in getLocalAddr(int sockfd);
+struct sockaddr_in getPeerAddr(int sockfd);
+
 const struct sockaddr* sockaddr_cast(const struct sockaddr_in* addr);
 struct sockaddr* sockaddr_cast(struct sockaddr_in* addr);
 const struct sockaddr_in* sockaddr_in_cast(const struct sockaddr* addr);

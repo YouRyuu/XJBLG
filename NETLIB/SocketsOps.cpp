@@ -176,3 +176,29 @@ bool isSelfConnect(int sockfd)
 {
     return false;
 }
+
+struct sockaddr_in getLocalAddr(int sockfd)
+{
+    struct sockaddr_in localaddr;
+    memset(&localaddr, 0, sizeof(localaddr));
+    socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
+    if(getsockname(sockfd, sockaddr_cast(&localaddr), &addrlen)<0)
+    {
+        std::cout<<"socketsops getlocalAddr error"<<std::endl;
+        exit(1);
+    }
+    return localaddr;
+}
+
+struct sockaddr_in getPeerAddr(int sockfd)
+{
+    struct sockaddr_in peeraddr;
+    memset(&peeraddr, 0, sizeof(peeraddr));
+    socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
+    if(getpeername(sockfd, sockaddr_cast(&peeraddr), &addrlen)<0)
+    {
+        std::cout<<"socketsops getpeerAddr error"<<std::endl;
+        exit(1);
+    }
+    return peeraddr;
+}
