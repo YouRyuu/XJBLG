@@ -30,7 +30,7 @@ public:
         addr_ = addr;
     }
 
-    const struct sockaddr_in& getSock()
+    const struct sockaddr_in& getSock() const
     {
         return addr_;
     }
