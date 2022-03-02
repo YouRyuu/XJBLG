@@ -2,6 +2,7 @@
 #define WS_CHANNEL_H
 
 #include <functional>
+#include <memory>
 class EventLoop;
 
 class Channel
@@ -10,11 +11,27 @@ public:
     typedef std::function<void()> EventCallback;
     Channel(EventLoop* loop, int fd);
     ~Channel();
-
+    void tie(const std::shared_ptr<void>&);
+    void handEventWithGuard();
     void handEvent();
     void setReadCallback(EventCallback callback)
     {
-        eventCallback = callback;
+        readCallback = callback;
+    }
+
+    void setWriteCallback(EventCallback cb)
+    {
+        writeCallback = cb;
+    }
+
+    void setCloseCallback(EventCallback cb)
+    {
+        closeCallback = cb;
+    }
+
+    void setErrorCallback(EventCallback cb)
+    {
+        errorCallback = cb;
     }
 
     int fd()
@@ -71,6 +88,10 @@ public:
         return events_ & kReadEvent;
     }
 
+    bool isWriting() const {
+        return events_ & kWriteEvent;
+    }
+
     int index()
     {
         return index_;
@@ -101,7 +122,12 @@ private:
     int events_;
     int revents_;
     int index_;
-    EventCallback eventCallback;
+    std::weak_ptr<void> tie_;
+    bool tied_;
+    EventCallback readCallback;
+    EventCallback writeCallback;
+    EventCallback closeCallback;
+    EventCallback errorCallback;
 };
 
 #endif

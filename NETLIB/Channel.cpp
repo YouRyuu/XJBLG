@@ -7,12 +7,13 @@ const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
 
 Channel::Channel(EventLoop* loop, int fd):
-loop_(loop), eventHanding(false),fd_(fd), events_(0), revents_(0), index_(-1)
+loop_(loop), eventHanding(false),fd_(fd), events_(0), revents_(0), index_(-1), tied_(false)
 {
 }
 
 Channel::~Channel()
 {
+    assert(!eventHanding);
     if(loop_->hasChannel(this))
     {
         remove();
@@ -29,15 +30,69 @@ void Channel::remove()
     loop_->removeChannel(this);
 }
 
+void Channel::tie(const std::shared_ptr<void>& obj)
+{
+    tie_ = obj;
+    tied_ = true;
+}
+
 void Channel::handEvent()
 {
-    eventHanding = true;
-    if(revents_ & (POLLIN | POLLPRI))
+    std::shared_ptr<void> guard;
+    if(tied_)
     {
-        if(eventCallback)
+        guard = tie_.lock();
+        if(guard)
         {
-            eventCallback();
+            handEventWithGuard();
         }
     }
+    else
+    {
+        handEventWithGuard();
+    }
+}
+
+void Channel::handEventWithGuard()
+{
+    eventHanding = true;
+    
+    if((revents_ & POLLHUP) && !(revents_ & POLLIN))
+    {
+        if(closeCallback)
+        {
+            closeCallback();
+        }    
+    }
+
+    if(revents_ & POLLNVAL)
+    {
+        std::cout <<"Channel:handEvent(): POLLNVAL"<<std::endl;
+    }
+
+    if(revents_ & (POLLERR | POLLNVAL))
+    {
+        if(errorCallback)
+        {
+            errorCallback();
+        }
+    }
+
+    if(revents_ & (POLLIN | POLLPRI))
+    {
+        if(readCallback)
+        {
+            readCallback();
+        }
+    }
+
+    if(revents_ & POLLOUT)
+    {
+        if(writeCallback)
+        {
+            writeCallback();
+        }
+    }
+
     eventHanding = false;
 }
