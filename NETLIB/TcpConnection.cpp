@@ -36,8 +36,8 @@ TcpConnection::TcpConnection(EventLoop* loop,
       std::bind(&TcpConnection::handleRead, this));
 //   channel_->setWriteCallback(
 //       std::bind(&TcpConnection::handleWrite, this));
-//   channel_->setCloseCallback(
-//       std::bind(&TcpConnection::handleClose, this));
+  channel_->setCloseCallback(
+      std::bind(&TcpConnection::handleClose, this));
 //   channel_->setErrorCallback(
 //       std::bind(&TcpConnection::handleError, this));
   socket_->setKeepAlive(true);
@@ -100,7 +100,7 @@ void TcpConnection::connectEstablished()
   //loop_->assertInLoopThread();
   assert(state_ == Connecting);
   setState(Connected);
-  //channel_->tie(shared_from_this());
+  channel_->tie(shared_from_this());
   channel_->enableReading();
   connectionCallback_(shared_from_this());
 }
@@ -129,75 +129,33 @@ void TcpConnection::handleRead()
   }
   else if (n == 0)
   {
-    std::cout<<"read 0"<<std::endl;
+    handleClose();
   }
   else
   {
     errno = savedErrno;
     std::cout << "TcpConnection::handleRead" <<std::endl;
-    //handleError();
+    handleError();
   }
 }
 
-// void TcpConnection::handleWrite()
-// {
-//   loop_->assertInLoopThread();
-//   if (channel_->isWriting())
-//   {
-//     ssize_t n = sockets::write(channel_->fd(),
-//                                outputBuffer_.peek(),
-//                                outputBuffer_.readableBytes());
-//     if (n > 0)
-//     {
-//       outputBuffer_.retrieve(n);
-//       if (outputBuffer_.readableBytes() == 0)
-//       {
-//         channel_->disableWriting();
-//         if (writeCompleteCallback_)
-//         {
-//           loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
-//         }
-//         if (state_ == kDisconnecting)
-//         {
-//           shutdownInLoop();
-//         }
-//       }
-//     }
-//     else
-//     {
-//       LOG_SYSERR << "TcpConnection::handleWrite";
-//       // if (state_ == kDisconnecting)
-//       // {
-//       //   shutdownInLoop();
-//       // }
-//     }
-//   }
-//   else
-//   {
-//     LOG_TRACE << "Connection fd = " << channel_->fd()
-//               << " is down, no more writing";
-//   }
-// }
+void TcpConnection::handleClose()
+{
+  assert(state_ == Connected || state_ == Connecting);
+  std::cout<<"TcpConnection::handleClose"<<std::endl;
+  setState(Disconnected);
+  channel_->disableAll();
+  TcpConnectionPtr conn(shared_from_this());
+  connectionCallback_(conn);  //进入else分支，输出断开连接
+  closeCallback_(conn);
+}
 
-// void TcpConnection::handleClose()
-// {
-//   loop_->assertInLoopThread();
-//   LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
-//   assert(state_ == kConnected || state_ == kDisconnecting);
-//   // we don't close fd, leave it to dtor, so we can find leaks easily.
-//   setState(kDisconnected);
-//   channel_->disableAll();
+void TcpConnection::handleError()
+{
+  std::cout<<"TcpConnection::handleError()"<<std::endl;
+}
 
-//   TcpConnectionPtr guardThis(shared_from_this());
-//   connectionCallback_(guardThis);
-//   // must be the last line
-//   closeCallback_(guardThis);
-// }
-
-// void TcpConnection::handleError()
-// {
-//   int err = sockets::getSocketError(channel_->fd());
-//   LOG_ERROR << "TcpConnection::handleError [" << name_
-//             << "] - SO_ERROR = " << err << " " << strerror_tl(err);
-// }
-
+void TcpConnection::handleWrite()
+{
+  //
+}

@@ -52,26 +52,24 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         void setMessageCallback(const MessageCallback& cb)
         { messageCallback_ = cb; }
 
-        //   void setWriteCompleteCallback(const WriteCompleteCallback& cb)
-        //   { writeCompleteCallback_ = cb; }
+        void setWriteCompleteCallback(const WriteCompleteCallback& cb)
+        { writeCompleteCallback_ = cb; }
 
         //   void setHighWaterMarkCallback(const HighWaterMarkCallback& cb, size_t highWaterMark)
         //   { highWaterMarkCallback_ = cb; highWaterMark_ = highWaterMark; }
 
-        // void setCloseCallback(const CloseCallback& cb)
-        // { closeCallback_ = cb; }
+        void setCloseCallback(const CloseCallback& cb)
+        { closeCallback_ = cb; }
 
-        // called when TcpServer accepts a new connection
         void connectEstablished();   // should be called only once
-        // called when TcpServer has removed me from its map
         void connectDestroyed();  // should be called only once
 
     private:
         enum StateE { Disconnected, Connecting, Connected, Disconnecting};
         void handleRead();
-        //void handleWrite();
-        //void handleClose();
-        //void handleError();
+        void handleWrite();
+        void handleClose();
+        void handleError();
         void setState(StateE s)
         {
             state_ = s;
@@ -88,6 +86,8 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         const InetAddress localAddr_;
         const InetAddress peerAddr_;
         ConnectionCallback connectionCallback_;
+        CloseCallback closeCallback_;
+        WriteCompleteCallback writeCompleteCallback_;
         MessageCallback messageCallback_;
 
 
