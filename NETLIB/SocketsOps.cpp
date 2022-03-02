@@ -40,7 +40,7 @@ int createNonblockingOrDie(sa_family_t family)
     int sockfd = socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
     if(sockfd < 0)
     {
-        std::cout<<"error in createNonblockingOrDie"<<std::endl;
+        std::cout<<"SocketsOps:error in createNonblockingOrDie"<<std::endl;
         exit(1);
     }
     return sockfd;
@@ -56,7 +56,7 @@ int createBlocking(sa_family_t family)
     int sockfd = socket(family,SOCK_STREAM, 0);
     if(sockfd < 0)
     {
-        std::cout<<"error in create Blocking"<<std::endl;
+        std::cout<<"SocketsOps:error in create Blocking"<<std::endl;
         exit(1);
     }
     return sockfd;
@@ -73,7 +73,7 @@ void bindOrDie(int sockfd, const struct sockaddr* addr)
     int ret = bind(sockfd, addr, static_cast<socklen_t>(sizeof(struct sockaddr_in)));
     if (ret < 0)
     {
-        std::cout<<"error in bindOrDie"<<std::endl;
+        std::cout<<"SocketsOps:error in bindOrDie"<<std::endl;
         exit(1);
     }
 }
@@ -83,7 +83,7 @@ void listenOrDie(int sockfd)
     int ret = listen(sockfd, SOMAXCONN);
     if(ret < 0)
     {
-        std::cout<<"error in listenOrDie"<<std::endl;
+        std::cout<<"SocketsOps:error in listenOrDie"<<std::endl;
         exit(1);
     }
 }
@@ -115,11 +115,11 @@ int accept_(int sockfd, struct sockaddr_in* addr)
       case ENOTSOCK:
       case EOPNOTSUPP:
         // unexpected errors
-        std::cout << "unexpected error of ::accept " << std::endl;
+        std::cout << "SocketsOps:unexpected error of ::accept " << std::endl;
         exit(1);
         break;
       default:
-        std::cout << "unknown error of ::accept " << std::endl;
+        std::cout << "SocketsOps:unknown error of ::accept " << std::endl;
         exit(1);
         break;
     }
@@ -146,7 +146,7 @@ void close_(int sockfd)
     int ret = close(sockfd);
     if(ret<0)
     {
-        std::cout<<"error in close"<<std::endl;
+        std::cout<<"SocketsOps:error in close"<<std::endl;
     }
 }
 
@@ -154,7 +154,7 @@ void shutdownWrite(int sockfd)
 {
     if(shutdown(sockfd, SHUT_WR) < 0)
     {
-        std::cout<<"error in shutdown"<<std::endl;
+        std::cout<<"SocketsOps:error in shutdown"<<std::endl;
     }
 }
 
@@ -184,7 +184,7 @@ struct sockaddr_in getLocalAddr(int sockfd)
     socklen_t addrlen = static_cast<socklen_t>(sizeof localaddr);
     if(getsockname(sockfd, sockaddr_cast(&localaddr), &addrlen)<0)
     {
-        std::cout<<"socketsops getlocalAddr error"<<std::endl;
+        std::cout<<"SocketsOps:socketsops getlocalAddr error"<<std::endl;
         exit(1);
     }
     return localaddr;
@@ -197,7 +197,7 @@ struct sockaddr_in getPeerAddr(int sockfd)
     socklen_t addrlen = static_cast<socklen_t>(sizeof peeraddr);
     if(getpeername(sockfd, sockaddr_cast(&peeraddr), &addrlen)<0)
     {
-        std::cout<<"socketsops getpeerAddr error"<<std::endl;
+        std::cout<<"SocketsOps:socketsops getpeerAddr error"<<std::endl;
         exit(1);
     }
     return peeraddr;
