@@ -55,13 +55,13 @@ void Socket::setReusePort(bool on)
                          &optval, static_cast<socklen_t>(sizeof optval));
   if (ret < 0 && on)
   {
-    std::cout << "SO_REUSEPORT failed." << std::endl;
+    std::cout << "Socket::setReusePort:SO_REUSEPORT failed." << std::endl;
     exit(1);
   }
 #else
   if (on)
   {
-    std::cout << "SO_REUSEPORT is not supported." << std::endl;
+    std::cout << "Socket::setReusePort:SO_REUSEPORT is not supported." << std::endl;
     exit(1);
   }
 #endif
