@@ -19,7 +19,7 @@ void test01()
         char buff[1024];
         InetAddress peerAddr;
         int connfd = listenfd.accept(&peerAddr);
-        printf("conn from %s, port %d\n", 
+        printf("Main():conn from %s, port %d\n", 
         inet_ntop(AF_INET, &peerAddr.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr.getSock().sin_port));
         close(connfd);
     }
@@ -30,7 +30,7 @@ void newConnection(int sockfd, const InetAddress& peerAddr)     //for test02
     InetAddress peerAddr_;
     peerAddr_ = const_cast<InetAddress&>(peerAddr);
     char buff[1024];
-    printf("newconn from %s, port %d\n", 
+    printf("Main():newconn from %s, port %d\n", 
         inet_ntop(AF_INET, &peerAddr_.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr_.getSock().sin_port));
     close(sockfd);
 }
@@ -47,18 +47,18 @@ void test02()
 
 void onMessage(const TcpConnectionPtr& conn, char* buf, int size)
 {
-    printf("onMessage():recv %d bytes from [%s]:%s\n", size, conn->name().c_str(), buf);
+    printf("Main():onMessage():recv %d bytes from [%s]:%s\n", size, conn->name().c_str(), buf);
 }
 
 void onConnection(const TcpConnectionPtr& conn)
 {
     if(conn->connected())
     {
-        printf("onConnection:new conn [%s]\n", conn->name().c_str());
+        printf("Main():onConnection:new conn [%s]\n", conn->name().c_str());
     }
     else
     {
-        printf("onConnection:conn[%s] is down\n", conn->name().c_str());
+        printf("Main():onConnection:conn[%s] is down\n", conn->name().c_str());
     }
 }
 
