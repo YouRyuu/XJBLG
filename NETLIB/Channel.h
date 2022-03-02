@@ -11,7 +11,7 @@ public:
     typedef std::function<void()> EventCallback;
     Channel(EventLoop* loop, int fd);
     ~Channel();
-    void tie(const std::shared_ptr<void>&);
+    void tie(const std::shared_ptr<void>&); // 阻止channel过早析构
     void handEventWithGuard();
     void handEvent();
     void setReadCallback(EventCallback callback)
@@ -122,8 +122,8 @@ private:
     int events_;
     int revents_;
     int index_;
-    std::weak_ptr<void> tie_;
-    bool tied_;
+    std::weak_ptr<void> tie_;   // 阻止channel过早析构
+    bool tied_; // 阻止channel过早析构
     EventCallback readCallback;
     EventCallback writeCallback;
     EventCallback closeCallback;
