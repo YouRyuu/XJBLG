@@ -53,7 +53,7 @@ void Acceptor::handleRead()
     }
     else        
     {
-        std::cout<<"error in acceptor::handleread"<<std::endl;
+        std::cout<<"Acceptor::handleRead:error in acceptor::handleread"<<std::endl;
         //描述符已满
         if (errno == EMFILE)
         {
