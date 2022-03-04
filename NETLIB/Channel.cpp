@@ -56,7 +56,7 @@ void Channel::handEvent()
 void Channel::handEventWithGuard()
 {
     eventHanding = true;
-    
+    outputEvent(revents_);
     if((revents_ & POLLHUP) && !(revents_ & POLLIN))
     {
         if(closeCallback)
@@ -93,6 +93,33 @@ void Channel::handEventWithGuard()
             writeCallback();
         }
     }
-
     eventHanding = false;
+}
+
+void Channel::outputEvent(int event)
+{
+    if(event & POLLIN)
+    {
+        std::cout<<"POLLIN;"<<std::endl;
+    }
+    if(event & POLLPRI)
+    {
+        std::cout<<"POLLPRI;"<<std::endl;
+    }
+    if(event & POLLOUT)
+    {
+        std::cout<<"POLLOUT;"<<std::endl;
+    }
+    if(event & POLLHUP)
+    {
+        std::cout<<"POLLHUP;"<<std::endl;
+    }
+    if(event & POLLERR)
+    {
+        std::cout<<"POLLERR;"<<std::endl;
+    }
+    if(event & POLLNVAL)
+    {
+        std::cout<<"POLLNVAL;"<<std::endl;
+    }
 }

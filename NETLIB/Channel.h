@@ -14,6 +14,7 @@ public:
     void tie(const std::shared_ptr<void>&); // 阻止channel过早析构
     void handEventWithGuard();
     void handEvent();
+    void outputEvent(int);
     void setReadCallback(EventCallback callback)
     {
         readCallback = callback;
