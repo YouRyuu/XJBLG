@@ -1,5 +1,5 @@
 #ifndef WS_ENDIAN_H
-#define WS_ENDIAN_h
+#define WS_ENDIAN_H
 
 #include <stdint.h>
 #ifdef linux
