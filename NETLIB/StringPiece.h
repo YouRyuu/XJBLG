@@ -159,10 +159,10 @@ public:
     }
 };
 
-    std::ostream &operator<<(std::ostream &os, const StringPiece &piece)
-    {
-        os<<piece.data();
-        return os;
-    }
+    // std::ostream &operator<<(std::ostream &os, const StringPiece &piece)
+    // {
+    //     os<<piece.data();
+    //     return os;
+    // }
 
 #endif
