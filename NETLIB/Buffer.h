@@ -49,8 +49,8 @@ public:
     static const size_t kInitialSize = 1024;
 
     Buffer(size_t initialSize = kInitialSize) : buffer_(kCheapPrepend + kInitialSize),
-                                                readerIndex_(0),
-                                                writerIndex_(0)
+                                                readerIndex_(kCheapPrepend),
+                                                writerIndex_(kCheapPrepend)
     {
         assert(readableBytes() == 0);
         assert(writableBytes() == initialSize);
@@ -170,7 +170,7 @@ public:
     std::string retrieveAsString(size_t len)
     {
         //将读取的数据转换为string
-        assert(len < readableBytes());
+        assert(len <= readableBytes());
         std::string result(peek(), len);
         retrieve(len);
         return result;
