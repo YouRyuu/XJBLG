@@ -3,6 +3,8 @@
 #include <memory>
 #include "InetAddress.h"
 #include "Callbacks.h"
+#include "Buffer.h"
+#include "StringPiece.h"
 
 class Channel;
 class EventLoop;
@@ -23,14 +25,11 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         bool connected() const { return state_ == Connected; }
         bool disconnected() const { return state_ == Disconnected; }
         EventLoop* getLoop() const { return loop_; }
-        // void send(string&& message); // C++11
-        //void send(const void* message, int len);
-        //void shutdown(); // NOT thread safe, no simultaneous calling
-        // void shutdownAndForceCloseAfter(double seconds); // NOT thread safe, no simultaneous calling
-        //void forceClose();
-        //void forceCloseWithDelay(double seconds);
-        //void setTcpNoDelay(bool on);
-        // reading or not
+        void send(StringPiece& data);    //发送数据
+        void send(const void* data, int len);
+        void send(Buffer *message);
+        void shutdown();
+        void forceClose();
         void startRead();
         void startReadInLoop();
         void stopRead();
@@ -75,6 +74,10 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
             state_ = s;
         }
 
+        void sendInLoop(const StringPiece& message);
+        void sendInLoop(const void* message, size_t len);
+        void shutdownInLoop();
+        void forceCloseInLoop();
         const char* stateToString() const;
 
         EventLoop* loop_;
@@ -89,6 +92,8 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         CloseCallback closeCallback_;
         WriteCompleteCallback writeCompleteCallback_;
         MessageCallback messageCallback_;
+        Buffer inputBuffer_;
+        Buffer outputBuffer_;
 
 
 };
