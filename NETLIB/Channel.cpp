@@ -32,6 +32,7 @@ void Channel::remove()
 
 void Channel::tie(const std::shared_ptr<void>& obj)
 {
+    //将channel的拥有者绑定，防止channel被拥有者（如TcpConnection）析构
     tie_ = obj;
     tied_ = true;
 }
