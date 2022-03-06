@@ -7,6 +7,10 @@
 #include "Acceptor.h"
 #include "TcpConnection.h"
 #include "TcpServer.h"
+#include "Buffer.h"
+#include "StringPiece.h"
+
+StringPiece message(std::string("wodehahahhahaha"));
 
 void test01()
 {
@@ -45,9 +49,9 @@ void test02()
     loop.loop();
 }
 
-void onMessage(const TcpConnectionPtr& conn, char* buf, int size)
+void onMessage(const TcpConnectionPtr& conn, Buffer* buf, int size)
 {
-    printf("Main():onMessage():recv %d bytes from [%s]:%s\n", size, conn->name().c_str(), buf);
+    printf("Main():onMessage():recv %d (%d)bytes from [%s]:%s\n", (int)buf->readableBytes(), size,conn->name().c_str(), buf->retrieveAllAsString().c_str());
 }
 
 void onConnection(const TcpConnectionPtr& conn)
@@ -55,6 +59,8 @@ void onConnection(const TcpConnectionPtr& conn)
     if(conn->connected())
     {
         printf("Main():onConnection:new conn [%s]\n", conn->name().c_str());
+        conn->send(message);
+        //conn->shutdown();
     }
     else
     {
