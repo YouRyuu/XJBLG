@@ -105,11 +105,11 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
   }
   if(!channel_->isWriting() && outputBuffer_.readableBytes()==0)
   {
-    //fd没有在写而且buf里没有要发送的数据
-    nwrote = write_(channel_->fd(), data, len);
+    //fd没有在写而且buf里没有要发送的数据，如果当前socket里有未发送完毕的数据，也送到buffer里去
+    nwrote = write_(channel_->fd(), data, len);   //先尝试用write发送数据
     if(nwrote >= 0)
     {
-      if(nwrote < len)
+      if(nwrote < len)    //如果没有发送完毕的话就用buffer
       {
         std::cout<<"TcpConnection::sendInLoop(): nwrote<len"<<std::endl;
       }
@@ -129,7 +129,7 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
     outputBuffer_.append(static_cast<const char*>(data)+nwrote, len-nwrote);
     if(!channel_->isWriting())
     {
-      channel_->enableWriting();
+      channel_->enableWriting();    //注册当前socket的可写事件，然后用handleWrite去处理
     }
   }
 }
