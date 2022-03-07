@@ -59,6 +59,7 @@ void onConnection(const TcpConnectionPtr& conn)
     if(conn->connected())
     {
         printf("Main():onConnection:new conn [%s]\n", conn->name().c_str());
+        sleep(5);
         conn->send(message);
         //conn->shutdown();
     }
