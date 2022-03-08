@@ -135,7 +135,7 @@ void Thread::start()
     }
     else
     {
-        latch_.wait();  //确保新线程执行
+        latch_.wait();  //主线程等待，确保新线程执行
         assert(tid_ > 0);
     }
 }

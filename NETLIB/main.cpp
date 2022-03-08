@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include "InetAddress.h"
@@ -9,6 +10,7 @@
 #include "TcpServer.h"
 #include "Buffer.h"
 #include "StringPiece.h"
+#include "ThreadPool.h"
 
 StringPiece message(std::string("wodehahahhahaha"));
 
@@ -80,8 +82,44 @@ void test03()
     loop.loop();
 }
 
+void func1()
+{
+    std::cout<<"thread run in func1, tid is:"<<CurrentThread::tid()<<std::endl;
+}
+
+void func2()
+{
+    std::cout<<"thread run in func2, tid is:"<<CurrentThread::tid()<<std::endl;
+}
+
+void func3()
+{
+    std::cout<<"thread run in func3, tid is:"<<CurrentThread::tid()<<std::endl;
+}
+
+void func4()
+{
+    std::cout<<"thread run in func4, tid is:"<<CurrentThread::tid()<<std::endl;
+}
+
+void func5()
+{
+    std::cout<<"thread run in func5, tid is:"<<CurrentThread::tid()<<std::endl;
+}
+void test04()
+{
+    ThreadPool pool;
+    pool.setMaxQueueSize(5);
+    pool.start(1);
+    pool.run(func1);
+    pool.run(func2);
+    pool.run(func3);
+    pool.run(func4);
+    pool.run(func5);
+    
+}
 int main()
 {
-    test03();
+    test04();
     return 0;
 }
