@@ -1,6 +1,6 @@
 #include "Thread.h"
 #include "CurrentThread.h"
-
+#include <iostream>
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -12,7 +12,7 @@
 
 pid_t gettid()
 {
-    return static_cast<pid_t>(syscall(SYS_gettid));
+    return static_cast<pid_t>(syscall(SYS_gettid));     //获取线程的pid，不同于pthread_self获得的，这个是可以在top里面看到的
 }
 
 namespace CurrentThread
@@ -29,9 +29,21 @@ namespace CurrentThread
 
     bool isMainThread()
     {
-        return tid() == getpid();
+        return tid() == getpid();       //通过进程pid和每个线程的pid判断是不是主线程
     }
 }
+
+// class ThreadNameInitializer
+// {
+//  public:
+//   ThreadNameInitializer()
+//   {
+//     CurrentThread::t_threadName = "main";
+//     CurrentThread::tid();
+//   }
+// };
+
+// ThreadNameInitializer init;
 
 class ThreadData
 {
@@ -113,6 +125,19 @@ void Thread::start()
 {
     assert(!started_);
     started_ = true;
+    ThreadData* data = new ThreadData(func_, name_, &tid_, &latch_);
+    if(pthread_create(&pthreadId_, NULL, &startThread, data))
+    {
+        started_ = false;
+        delete data;
+        std::cout<<"Thread::start(): error in pthread_create"<<std::endl;
+        exit(1);
+    }
+    else
+    {
+        latch_.wait();  //确保新线程执行
+        assert(tid_ > 0);
+    }
 }
 
 int Thread::join()
