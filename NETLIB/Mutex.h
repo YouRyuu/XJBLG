@@ -13,23 +13,36 @@
 class MutexLock
 {
     public:
-        MutexLock()
+        MutexLock():holder_(0)
         {
             MCHECK(pthread_mutex_init(&mutex_, NULL));
         }
 
         ~MutexLock()
         {
+            assert(holder_ == 0);
             MCHECK(pthread_mutex_destroy(&mutex_));
+        }
+
+        bool isLockedByThisThread() const
+        {
+            return holder_ == CurrentThread::tid();
+        }
+
+        void assertLocked() const
+        {
+            assert(isLockedByThisThread());
         }
 
         void lock()
         {
             MCHECK(pthread_mutex_lock(&mutex_));
+            assignHolder();
         }
 
         void unlock()
         {
+            unassignHolder();
             MCHECK(pthread_mutex_unlock(&mutex_));
         }
 
@@ -40,7 +53,33 @@ class MutexLock
 
     private:
         pthread_mutex_t mutex_;
+        pid_t holder_;
         friend class Condition;
+        class UnassignGraud
+        {
+            public:
+                explicit UnassignGraud(MutexLock& owner):owner_(owner)
+                {
+                    owner.unassignHolder();
+                }
+
+                ~UnassignGraud()
+                {
+                    owner_.assignHolder();
+                }
+            private:
+                MutexLock& owner_;
+        };
+
+        void unassignHolder()
+        {
+            holder_ = 0;
+        }
+
+        void assignHolder()
+        {
+            holder_  = CurrentThread::tid();
+        }
 };
 
 class MutexLockGuard

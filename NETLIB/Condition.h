@@ -21,6 +21,7 @@ class Condition
 
         void wait()
         {
+            MutexLock::UnassignGraud ug(mutex_);
             MCHECK(pthread_cond_wait(&pcond_, mutex_.get()));
         }
 
