@@ -1,5 +1,5 @@
-#ifndef WS_COUNTDOWNLATCH_H
-#define WS_COUNTDOWNLATCH_H
+#ifndef COUNTDOWNLATCH_H
+#define COUNTDOWNLATCH_H
 
 #include "Mutex.h"
 #include "Condition.h"

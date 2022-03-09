@@ -1,5 +1,5 @@
-#ifndef WS_CURRENTTHREAD_H
-#define WS_CURRENTTHREAD_H
+#ifndef CURRENTTHREAD_H
+#define CURRENTTHREAD_H
 
 #include <string>
 #include <unistd.h>

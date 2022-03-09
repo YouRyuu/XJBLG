@@ -1,5 +1,5 @@
-#ifndef WS_CALLBACKS_H
-#define WS_CALLBACKS_H
+#ifndef CALLBACKS_H
+#define CALLBACKS_H
 #include <memory>
 #include <functional>
 template<class T>

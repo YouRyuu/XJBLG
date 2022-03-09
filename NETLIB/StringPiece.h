@@ -1,5 +1,5 @@
-#ifndef WS_STRINGPIECE_H
-#define WS_STRINGPIECE_H
+#ifndef STRINGPIECE_H
+#define STRINGPIECE_H
 
 #include <string.h>
 #include <iosfwd>

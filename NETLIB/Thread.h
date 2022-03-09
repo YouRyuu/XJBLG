@@ -1,5 +1,5 @@
-#ifndef WS_THREAD_H
-#define WS_THREAD_H
+#ifndef THREAD_H
+#define THREAD_H
 
 #include "CountDownLatch.h"
 #include <functional>

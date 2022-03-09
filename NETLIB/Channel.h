@@ -1,5 +1,5 @@
-#ifndef WS_CHANNEL_H
-#define WS_CHANNEL_H
+#ifndef CHANNEL_H
+#define CHANNEL_H
 
 #include <functional>
 #include <memory>
@@ -119,6 +119,7 @@ private:
     void update();
     EventLoop* loop_;
     bool eventHanding;
+    bool addedToLoop_;
     const int fd_;
     int events_;
     int revents_;

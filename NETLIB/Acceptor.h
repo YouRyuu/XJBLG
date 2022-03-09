@@ -1,5 +1,5 @@
-#ifndef WS_ACCEPTOR_H
-#define WS_ACCEPTOR_H
+#ifndef ACCEPTOR_H
+#define ACCEPTOR_H
 
 #include "Channel.h"
 #include "Socket.h"

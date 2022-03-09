@@ -31,6 +31,7 @@ Acceptor::~Acceptor()
 
 void Acceptor::listen()
 {
+    loop_->assertInLoopThread();
     listening_ = true;
     acceptSocket_.listen();
     acceptChannel_.enableReading();
@@ -38,8 +39,9 @@ void Acceptor::listen()
 
 void Acceptor::handleRead()
 {
+    loop_->assertInLoopThread();
     InetAddress peerAddr;
-    int connfd = acceptSocket_.accept(&peerAddr);
+    int connfd = acceptSocket_.accept(&peerAddr);       //主线程调用
     if(connfd >=0)
     {
         if(newCb)

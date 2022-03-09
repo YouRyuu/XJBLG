@@ -7,26 +7,30 @@ const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
 
 Channel::Channel(EventLoop* loop, int fd):
-loop_(loop), eventHanding(false),fd_(fd), events_(0), revents_(0), index_(-1), tied_(false)
+loop_(loop), eventHanding(false),fd_(fd), events_(0), revents_(0), index_(-1), tied_(false), addedToLoop_(false)
 {
 }
 
 Channel::~Channel()
 {
     assert(!eventHanding);
-    if(loop_->hasChannel(this))
+    assert(!addedToLoop_);
+    if(loop_->isInLoopThread())
     {
-        remove();
+        assert(!loop_->hasChannel(this));
     }
 }
 
 void Channel::update()
 {
+    addedToLoop_ = true;
     loop_->updateChannel(this);
 }
 
 void Channel::remove()
 {
+    assert(isNoneEvent());
+    addedToLoop_ = false;
     loop_->removeChannel(this);
 }
 
@@ -57,7 +61,7 @@ void Channel::handEvent()
 void Channel::handEventWithGuard()
 {
     eventHanding = true;
-    outputEvent(revents_);
+    //outputEvent(revents_);
     if((revents_ & POLLHUP) && !(revents_ & POLLIN))
     {
         if(closeCallback)

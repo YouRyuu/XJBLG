@@ -2,6 +2,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <string>
 #include "InetAddress.h"
 #include "Socket.h"
 #include "Eventloop.h"
@@ -11,6 +12,7 @@
 #include "Buffer.h"
 #include "StringPiece.h"
 #include "ThreadPool.h"
+#include "CurrentThread.h"
 
 StringPiece message(std::string("wodehahahhahaha"));
 
@@ -20,24 +22,24 @@ void test01()
     Socket listenfd(socket(AF_INET, SOCK_STREAM, 0));
     listenfd.bindAddress(listenaddr);
     listenfd.listen();
-    for(;;)
+    for (;;)
     {
         char buff[1024];
         InetAddress peerAddr;
         int connfd = listenfd.accept(&peerAddr);
-        printf("Main():conn from %s, port %d\n", 
-        inet_ntop(AF_INET, &peerAddr.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr.getSock().sin_port));
+        printf("Main():conn from %s, port %d\n",
+               inet_ntop(AF_INET, &peerAddr.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr.getSock().sin_port));
         close(connfd);
     }
 }
 
-void newConnection(int sockfd, const InetAddress& peerAddr)     //for test02
+void newConnection(int sockfd, const InetAddress &peerAddr) // for test02
 {
     InetAddress peerAddr_;
-    peerAddr_ = const_cast<InetAddress&>(peerAddr);
+    peerAddr_ = const_cast<InetAddress &>(peerAddr);
     char buff[1024];
-    printf("Main():newconn from %s, port %d\n", 
-        inet_ntop(AF_INET, &peerAddr_.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr_.getSock().sin_port));
+    printf("Main():newconn from %s, port %d\n",
+           inet_ntop(AF_INET, &peerAddr_.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr_.getSock().sin_port));
     close(sockfd);
 }
 
@@ -51,75 +53,39 @@ void test02()
     loop.loop();
 }
 
-void onMessage(const TcpConnectionPtr& conn, Buffer* buf, int size)
+void onMessage(const TcpConnectionPtr &conn, Buffer *buf, int size)
 {
-    printf("Main():onMessage():recv %d (%d)bytes from [%s]:%s\n", (int)buf->readableBytes(), size,conn->name().c_str(), buf->retrieveAllAsString().c_str());
+    printf("onMessage:tid=%d, recv %d bytes from [%s]:%s\n", CurrentThread::tid(),  size, conn->name().c_str(), buf->retrieveAllAsString().c_str());
 }
 
-void onConnection(const TcpConnectionPtr& conn)
+void onConnection(const TcpConnectionPtr &conn)
 {
-    if(conn->connected())
+    if (conn->connected())
     {
-        printf("Main():onConnection:new conn [%s]\n", conn->name().c_str());
-        sleep(5);
+        printf("onConnection:tid=%d, new conn [%s]\n", CurrentThread::tid(), conn->name().c_str());
         conn->send(message);
-        //conn->shutdown();
+        // conn->shutdown();
     }
     else
     {
-        printf("Main():onConnection:conn[%s] is down\n", conn->name().c_str());
+        printf("onConnection:tid=%d, conn[%s] is down\n", CurrentThread::tid(), conn->name().c_str());
     }
 }
 
 void test03()
 {
+}
+
+int main()
+{
+    printf("main():tid=%d\n", getpid());
     InetAddress listenAddr(9898);
     EventLoop loop;
     TcpServer server(&loop, listenAddr, "myserver");
     server.setConnectionCallback(onConnection);
     server.setMessageCallback(onMessage);
+    server.setThreadNum(5);
     server.start();
     loop.loop();
-}
-
-void func1()
-{
-    std::cout<<"thread run in func1, tid is:"<<CurrentThread::tid()<<std::endl;
-}
-
-void func2()
-{
-    std::cout<<"thread run in func2, tid is:"<<CurrentThread::tid()<<std::endl;
-}
-
-void func3()
-{
-    std::cout<<"thread run in func3, tid is:"<<CurrentThread::tid()<<std::endl;
-}
-
-void func4()
-{
-    std::cout<<"thread run in func4, tid is:"<<CurrentThread::tid()<<std::endl;
-}
-
-void func5()
-{
-    std::cout<<"thread run in func5, tid is:"<<CurrentThread::tid()<<std::endl;
-}
-void test04()
-{
-    ThreadPool pool;
-    pool.setMaxQueueSize(5);
-    pool.start(1);
-    pool.run(func1);
-    pool.run(func2);
-    pool.run(func3);
-    pool.run(func4);
-    pool.run(func5);
-    
-}
-int main()
-{
-    test04();
     return 0;
 }

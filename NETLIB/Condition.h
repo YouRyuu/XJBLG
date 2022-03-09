@@ -1,5 +1,5 @@
-#ifndef WS_CONDITION_H
-#define WS_CONDITION_H
+#ifndef CONDITION_H
+#define CONDITION_H
 
 #include "Mutex.h"
 

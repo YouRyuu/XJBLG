@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <poll.h>
 #include "Eventloop.h"
+#include <iostream>
 
 Poller::Poller(EventLoop* loop):ownerloop_(loop)
 {    
@@ -10,12 +11,26 @@ Poller::Poller(EventLoop* loop):ownerloop_(loop)
 
 Poller::~Poller() = default;
 
+void Poller::assertInLoopThread() const
+{
+    ownerloop_->assertInLoopThread();
+}
+
 void Poller::poll(ChannelList* activeChannels)
 {
     int numEvents = ::poll(&*pollfds_.begin(), pollfds_.size(), 1000);
     if(numEvents>0)
     {
         fillActiveChannels(numEvents ,activeChannels);
+    }
+    else if(numEvents==0)
+    {
+        std::cout<<"Poller::poll() nothing happen"<<std::endl;
+    }
+    else
+    {
+        std::cout<<"Poller::poll() error"<<std::endl;
+        exit(1);
     }
 }
 
@@ -38,6 +53,7 @@ void Poller::fillActiveChannels(int numEvents, ChannelList* activeChannels)
 
 void Poller::updateChannel(Channel* channel)
 {
+    assertInLoopThread();
     if(channel->index()<0)    //新来的fd(channel)
     {
         assert(channels_.find(channel->fd())==channels_.end());
@@ -69,6 +85,7 @@ void Poller::updateChannel(Channel* channel)
 
 void Poller::removeChannel(Channel* channel)
 {
+    assertInLoopThread();
     assert(channels_.find(channel->fd())!=channels_.end());
     assert(channels_[channel->fd()]==channel);
     assert(channel->isNoneEvent());
@@ -99,6 +116,7 @@ void Poller::removeChannel(Channel* channel)
 
 bool Poller::hasChannel(Channel* channel)
 {
+    assertInLoopThread();
     auto it = channels_.find(channel->fd());
     return (it!=channels_.end() && it->second==channel);
 }

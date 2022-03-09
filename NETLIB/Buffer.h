@@ -1,5 +1,5 @@
-#ifndef WS_BUFFER_H
-#define WS_BUFFER_H
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #include <vector>
 #include <algorithm>

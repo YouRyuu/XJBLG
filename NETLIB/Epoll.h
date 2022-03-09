@@ -1,5 +1,5 @@
-#ifndef WS_EPOLL_H
-#define WS_EPOLL_H
+#ifndef EPOLL_H
+#define EPOLL_H
 
 #include <map>
 #include <vector>
@@ -19,6 +19,7 @@ public:
     void updateChannel(Channel* channel);
     void removeChannel(Channel* channel);
     bool hasChannel(Channel* channel);
+    void assertInLoopThread() const;
 private:
     void fillActiveChannels(int nunEvents, ChannelList* activeChannels);
     typedef std::vector<struct pollfd> PollfdList;

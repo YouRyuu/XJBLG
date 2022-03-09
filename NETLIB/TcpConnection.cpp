@@ -34,12 +34,12 @@ TcpConnection::TcpConnection(EventLoop *loop,
 {
   channel_->setReadCallback(
       std::bind(&TcpConnection::handleRead, this));
-    channel_->setWriteCallback(
-        std::bind(&TcpConnection::handleWrite, this));
+  channel_->setWriteCallback(
+      std::bind(&TcpConnection::handleWrite, this));
   channel_->setCloseCallback(
       std::bind(&TcpConnection::handleClose, this));
-  //   channel_->setErrorCallback(
-  //       std::bind(&TcpConnection::handleError, this));
+  channel_->setErrorCallback(
+      std::bind(&TcpConnection::handleError, this));
   socket_->setKeepAlive(true);
 }
 
@@ -67,105 +67,124 @@ const char *TcpConnection::stateToString() const
 
 void TcpConnection::send(const void *data, int len)
 {
-    StringPiece message(static_cast<const char*>(data), len);
-    send(message);
+  StringPiece message(static_cast<const char *>(data), len);
+  send(message);
 }
 
 void TcpConnection::send(StringPiece &data)
 {
-    if(state_ == Connected)
+  if (state_ == Connected)
+  {
+    if(loop_->isInLoopThread())
     {
-        sendInLoop(data);
+      sendInLoop(data);
     }
+    else
+    {
+      void (TcpConnection::*fp)(const StringPiece& data) = &TcpConnection::sendInLoop;
+      loop_->runInLoop(std::bind(fp, this, data.as_string()));
+    }
+  }
 }
 
-void TcpConnection::send(Buffer* message)
+void TcpConnection::send(Buffer *message)
 {
-    if(state_ == Connected)
+  if (state_ == Connected)
+  {
+    if(loop_->isInLoopThread())
     {
-        sendInLoop(message->peek(), message->readableBytes());
-        message->retrieveAll();
+       sendInLoop(message->peek(), message->readableBytes());
+      message->retrieveAll();
     }
+    else
+    {
+      void (TcpConnection::*fp)(const StringPiece& data) = &TcpConnection::sendInLoop;
+      loop_->runInLoop(std::bind(fp, this, message->retrieveAllAsString()));
+    }
+   
+  }
 }
 
-void TcpConnection::sendInLoop(const StringPiece& message)
+void TcpConnection::sendInLoop(const StringPiece &message)
 {
   sendInLoop(message.data(), message.size());
 }
 
-void TcpConnection::sendInLoop(const void* data, size_t len)
+void TcpConnection::sendInLoop(const void *data, size_t len)
 {
-  //loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   ssize_t nwrote = 0;
   size_t remaining = len;
   bool faultError = false;
-  if(state_ == Disconnected)
+  if (state_ == Disconnected)
   {
-      std::cout<<"TcpConnection::sendInLoop() state_ is Disconnected"<<std::endl;
+    std::cout << "TcpConnection::sendInLoop() state_ is Disconnected" << std::endl;
   }
-  if(!channel_->isWriting() && outputBuffer_.readableBytes()==0)
+  if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
   {
-    //fd没有在写而且buf里没有要发送的数据，如果当前socket里有未发送完毕的数据，也送到buffer里去
-    nwrote = write_(channel_->fd(), data, len);   //先尝试用write发送数据
-    if(nwrote >= 0)
+    // fd没有在写而且buf里没有要发送的数据，如果当前socket里有未发送完毕的数据，也送到buffer里去
+    nwrote = write_(channel_->fd(), data, len); //先尝试用write发送数据
+    if (nwrote >= 0)
     {
-      if(nwrote < len)    //如果没有发送完毕的话就用buffer
+      if (nwrote < len) //如果没有发送完毕的话就用buffer
       {
-        std::cout<<"TcpConnection::sendInLoop(): nwrote<len"<<std::endl;
+        std::cout << "TcpConnection::sendInLoop(): nwrote<len" << std::endl;
       }
     }
     else
     {
       nwrote = 0;
-      if(errno!=EWOULDBLOCK)
+      if (errno != EWOULDBLOCK)
       {
-        std::cout<<"TcpConnection::sendInLoop(): errno!=EWOULDBLOCK"<<std::endl;
+        std::cout << "TcpConnection::sendInLoop(): errno!=EWOULDBLOCK" << std::endl;
       }
     }
   }
   assert(nwrote >= 0);
-  if(nwrote < len)
+  if (nwrote < len)
   {
-    outputBuffer_.append(static_cast<const char*>(data)+nwrote, len-nwrote);
-    if(!channel_->isWriting())
+    outputBuffer_.append(static_cast<const char *>(data) + nwrote, len - nwrote);
+    if (!channel_->isWriting())
     {
-      channel_->enableWriting();    //注册当前socket的可写事件，然后用handleWrite去处理
+      channel_->enableWriting(); //注册当前socket的可写事件，然后用handleWrite去处理
     }
   }
 }
 
 void TcpConnection::shutdown()
 {
-    if(state_ == Connected)
-    {
-      setState(Disconnecting);
-      loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
-    }
+  if (state_ == Connected)
+  {
+    setState(Disconnecting);
+    loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
+  }
 }
 
 void TcpConnection::shutdownInLoop()
 {
-  if(!channel_->isWriting())
+  loop_->assertInLoopThread();
+  if (!channel_->isWriting())
   {
-      socket_->shutdownWrite_();
+    socket_->shutdownWrite_();
   }
 }
 
 void TcpConnection::forceClose()
 {
-    if(state_ == Connected || state_ == Disconnecting)
-    {
-      setState(Disconnecting);
-      loop_->runInLoop(std::bind(&TcpConnection::forceCloseInLoop, shared_from_this()));
-    }
+  if (state_ == Connected || state_ == Disconnecting)
+  {
+    setState(Disconnecting);
+    loop_->runInLoop(std::bind(&TcpConnection::forceCloseInLoop, shared_from_this()));
+  }
 }
 
 void TcpConnection::forceCloseInLoop()
 {
-    if(state_ == Connected || state_ == Disconnecting)
-    {
-      handleClose();
-    }
+  loop_->assertInLoopThread();
+  if (state_ == Connected || state_ == Disconnecting)
+  {
+    handleClose();
+  }
 }
 
 void TcpConnection::startRead()
@@ -175,7 +194,7 @@ void TcpConnection::startRead()
 
 void TcpConnection::startReadInLoop()
 {
-  // loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   if (!reading_ || !channel_->isReading())
   {
     channel_->enableReading();
@@ -190,7 +209,7 @@ void TcpConnection::stopRead()
 
 void TcpConnection::stopReadInLoop()
 {
-  // loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   if (reading_ || channel_->isReading())
   {
     channel_->disableReading();
@@ -200,7 +219,7 @@ void TcpConnection::stopReadInLoop()
 
 void TcpConnection::connectEstablished()
 {
-  // loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   assert(state_ == Connecting);
   setState(Connected);
   channel_->tie(shared_from_this());
@@ -210,7 +229,7 @@ void TcpConnection::connectEstablished()
 
 void TcpConnection::connectDestroyed()
 {
-  // loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   if (state_ == Connected)
   {
     setState(Disconnected);
@@ -222,7 +241,7 @@ void TcpConnection::connectDestroyed()
 
 void TcpConnection::handleRead()
 {
-  // loop_->assertInLoopThread();
+  loop_->assertInLoopThread();
   int savedErrno = 0;
   char buf[1024];
   ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
@@ -244,6 +263,7 @@ void TcpConnection::handleRead()
 
 void TcpConnection::handleClose()
 {
+  loop_->assertInLoopThread();
   assert(state_ == Connected || state_ == Disconnecting);
   std::cout << "TcpConnection::handleClose" << std::endl;
   setState(Disconnected);
@@ -260,34 +280,35 @@ void TcpConnection::handleError()
 
 void TcpConnection::handleWrite()
 {
-    if(channel_->isWriting())
+  loop_->assertInLoopThread();
+  if (channel_->isWriting())
+  {
+    ssize_t n = write_(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
+    if (n > 0)
     {
-      ssize_t n = write_(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
-      if(n>0)
+      outputBuffer_.retrieve(n);
+      if (outputBuffer_.readableBytes() == 0)
       {
-        outputBuffer_.retrieve(n);
-        if(outputBuffer_.readableBytes() == 0)
+        //读完了
+        channel_->disableWriting();
+        if (state_ == Disconnecting)
         {
-          //读完了
-          channel_->disableWriting();
-          if(state_ == Disconnecting)
-          {
-            shutdownInLoop();
-          }
-        }
-        else
-        {
-            std::cout<<"TcpConnection::handleWrite():going to write"<<std::endl;
+          shutdownInLoop();
         }
       }
       else
       {
-          std::cout<<"TcpConnection::handleWrite():write error"<<std::endl;
+        std::cout << "TcpConnection::handleWrite():going to write" << std::endl;
       }
+    }
+    else
+    {
+      std::cout << "TcpConnection::handleWrite():write error" << std::endl;
+    }
   }
   else
   {
-      std::cout<< "TcpConnection::handleWrite():Connection fd = " << channel_->fd()
-              << " is down, no more writing"<<std::endl;
+    std::cout << "TcpConnection::handleWrite():Connection fd = " << channel_->fd()
+              << " is down, no more writing" << std::endl;
   }
 }

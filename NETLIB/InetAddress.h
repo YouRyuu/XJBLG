@@ -1,5 +1,5 @@
-#ifndef WS_INETADDRESS_H
-#define WS_INETADDRESS_H
+#ifndef INETADDRESS_H
+#define INETADDRESS_H
 
 #include <netinet/in.h>
 #include <string>

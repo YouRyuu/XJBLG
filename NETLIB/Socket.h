@@ -1,5 +1,5 @@
-#ifndef WS_SOCKET_H
-#define WS_SOCKET_H
+#ifndef SOCKET_H
+#define SOCKET_H
 
 class InetAddress;
 struct tcp_info;

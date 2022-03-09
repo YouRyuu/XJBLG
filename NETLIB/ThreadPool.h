@@ -1,5 +1,5 @@
-#ifndef WS_THREADPOOL_H
-#define WS_THREADPOOL_H
+#ifndef THREADPOOL_H
+#define THREADPOOL_H
 
 #include "Condition.h"
 #include "Mutex.h"

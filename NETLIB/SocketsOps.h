@@ -1,5 +1,5 @@
-#ifndef WS_SOCKETSOPS_H
-#define WS_SOCKETSOPS_H
+#ifndef SOCKETSOPS_H
+#define SOCKETSOPS_H
 
 #include <arpa/inet.h>
 

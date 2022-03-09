@@ -1,5 +1,5 @@
-#ifndef WS_TCPCONNECTION_H
-#define WS_TCPCONNECTION_H
+#ifndef TCPCONNECTION_H
+#define TCPCONNECTION_H
 #include <memory>
 #include "InetAddress.h"
 #include "Callbacks.h"
@@ -62,6 +62,16 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
 
         void connectEstablished();   // should be called only once
         void connectDestroyed();  // should be called only once
+
+        Buffer* inputBuffer()
+        {
+            return &inputBuffer_;
+        }
+
+        Buffer* outputBuffer()
+        {
+            return &outputBuffer_;
+        }
 
     private:
         enum StateE { Disconnected, Connecting, Connected, Disconnecting};

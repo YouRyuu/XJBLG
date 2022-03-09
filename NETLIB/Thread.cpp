@@ -33,17 +33,17 @@ namespace CurrentThread
     }
 }
 
-// class ThreadNameInitializer
-// {
-//  public:
-//   ThreadNameInitializer()
-//   {
-//     CurrentThread::t_threadName = "main";
-//     CurrentThread::tid();
-//   }
-// };
+class ThreadNameInitializer
+{
+ public:
+  ThreadNameInitializer()
+  {
+    CurrentThread::t_threadName = "main";
+    CurrentThread::tid();
+  }
+};
 
-// ThreadNameInitializer init;
+ThreadNameInitializer init;
 
 class ThreadData
 {
