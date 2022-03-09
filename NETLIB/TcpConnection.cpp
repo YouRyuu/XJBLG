@@ -71,7 +71,7 @@ void TcpConnection::send(const void *data, int len)
   send(message);
 }
 
-void TcpConnection::send(StringPiece &data)
+void TcpConnection::send(const StringPiece &data)
 {
   if (state_ == Connected)
   {

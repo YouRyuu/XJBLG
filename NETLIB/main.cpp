@@ -14,48 +14,14 @@
 #include "ThreadPool.h"
 #include "CurrentThread.h"
 
-StringPiece message(std::string("wodehahahhahaha"));
 
-void test01()
-{
-    InetAddress listenaddr(8090);
-    Socket listenfd(socket(AF_INET, SOCK_STREAM, 0));
-    listenfd.bindAddress(listenaddr);
-    listenfd.listen();
-    for (;;)
-    {
-        char buff[1024];
-        InetAddress peerAddr;
-        int connfd = listenfd.accept(&peerAddr);
-        printf("Main():conn from %s, port %d\n",
-               inet_ntop(AF_INET, &peerAddr.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr.getSock().sin_port));
-        close(connfd);
-    }
-}
+char *s = "HTTP/1.1 200 OK\r\nContent-Length: 91\r\nConnecion: Keep-Alive\r\nContent-Type: text/html\r\nServer: Muduo\r\n\r\n<html><head><title>This is title</title></head><body><h1>Hello</h1>Now is xxx</body></html>";
 
-void newConnection(int sockfd, const InetAddress &peerAddr) // for test02
-{
-    InetAddress peerAddr_;
-    peerAddr_ = const_cast<InetAddress &>(peerAddr);
-    char buff[1024];
-    printf("Main():newconn from %s, port %d\n",
-           inet_ntop(AF_INET, &peerAddr_.getSock().sin_addr, buff, sizeof buff), ntohs(peerAddr_.getSock().sin_port));
-    close(sockfd);
-}
-
-void test02()
-{
-    InetAddress listenAddr(8090);
-    EventLoop loop;
-    Acceptor acceptor(&loop, listenAddr, true);
-    acceptor.setNewConnectionCallback(newConnection);
-    acceptor.listen();
-    loop.loop();
-}
 
 void onMessage(const TcpConnectionPtr &conn, Buffer *buf, int size)
 {
     printf("onMessage:tid=%d, recv %d bytes from [%s]:%s\n", CurrentThread::tid(),  size, conn->name().c_str(), buf->retrieveAllAsString().c_str());
+    conn->send(s);
 }
 
 void onConnection(const TcpConnectionPtr &conn)
@@ -63,7 +29,7 @@ void onConnection(const TcpConnectionPtr &conn)
     if (conn->connected())
     {
         printf("onConnection:tid=%d, new conn [%s]\n", CurrentThread::tid(), conn->name().c_str());
-        conn->send(message);
+        //conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
         // conn->shutdown();
     }
     else

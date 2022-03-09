@@ -205,6 +205,7 @@ public:
     {
         ensureWritableBytes(len);
         std::copy(data, data + len, beginWrite());
+        hasWritten(len);
     }
 
     void append(const StringPiece &str)

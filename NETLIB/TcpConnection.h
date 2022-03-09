@@ -25,7 +25,7 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         bool connected() const { return state_ == Connected; }
         bool disconnected() const { return state_ == Disconnected; }
         EventLoop* getLoop() const { return loop_; }
-        void send(StringPiece& data);    //发送数据
+        void send(const StringPiece& data);    //发送数据
         void send(const void* data, int len);
         void send(Buffer *message);
         void shutdown();
