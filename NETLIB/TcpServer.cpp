@@ -66,7 +66,8 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
     conn->setConnectionCallback(connectionCallback_);
     conn->setMessageCallback(messageCallback_);
     conn->setCloseCallback(std::bind(&TcpServer::removeConnection, this, std::placeholders::_1));
-    ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
+    ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));     //将新的conn给一个新的线程，调用runInLoop，
+                                                                                //因为这时候是在主线程里面调用的runInLoop，而这个ioLoop是属于新线程的，所以会调用queueLoop
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)

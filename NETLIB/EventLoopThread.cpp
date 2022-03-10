@@ -34,7 +34,7 @@ EventLoop* EventLoopThread::startLoop()
     return loop;
 }
 
-void EventLoopThread::threadFunc()
+void EventLoopThread::threadFunc()      //子线程会调用这个函数
 {
     EventLoop loop;     //子线程的loop
     if(callback_)
@@ -44,9 +44,9 @@ void EventLoopThread::threadFunc()
     {
         MutexLockGuard lock(mutex_);
         loop_ = &loop;
-        cond_.notify();
+        cond_.notify();     //已经获取到了子线程的loop，通知主线程
     }
-    loop.loop();
+    loop.loop();        //子线程进入loop等待事件
 
     MutexLockGuard lock(mutex_);
     loop_ = NULL;
