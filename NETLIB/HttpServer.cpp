@@ -1,8 +1,10 @@
 #include "HttpServer.h"
 #include "HttpResponse.h"
+#include "HttpRequest.h"
+#include "HttpContext.h"
 #include "Callbacks.h"
 
-void defaultHttpCallback(HttpResponse *resp)
+void defaultHttpCallback(const HttpRequest &, HttpResponse *resp)
 {
     resp->setStatusCode(HttpResponse::k404);
     resp->setStatusMessage("Not Found");
@@ -31,8 +33,7 @@ void HttpServer::onConnection(const TcpConnectionPtr &conn)
     if (conn->connected())
     {
         printf("onConnection, new conn [%s]\n", conn->name().c_str());
-        //conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
-        // conn->shutdown();
+        conn->setContext(HttpContext());
     }
     else
     {
@@ -43,14 +44,30 @@ void HttpServer::onConnection(const TcpConnectionPtr &conn)
 void HttpServer::onMessage(const TcpConnectionPtr &conn,
                            Buffer *buf, int n)
 {
-    printf("onMessage:recv %d bytes from [%s]:%s\n", n, conn->name().c_str(), buf->retrieveAllAsString().c_str());
-    onRequest(conn);
+    //printf("onMessage:recv %d bytes from [%s]:\n%s\n", n, conn->name().c_str(), buf->retrieveAllAsString().c_str());
+    HttpContext *context = conn->getMutableContext();
+    if (!context->parseRequest(buf))
+    {
+        //请求解析失败,关闭连接
+        printf("HttpServer::onMessage close conn\n");
+        conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
+        conn->shutdown();
+    }
+    if (context->gotAll())
+    {
+        printf("HttpServer::onMessage parse succ\n");
+        //解析成功
+        onRequest(conn, context->request());
+    }
 }
 
-void HttpServer::onRequest(const TcpConnectionPtr &conn)
+void HttpServer::onRequest(const TcpConnectionPtr &conn, const HttpRequest &req)
 {
+    const std::string &connection = req.getHeader("Connection");
+    // bool close = connection == "close" ||
+    //              (req.getVersion() == HttpRequest::Http10 && connection != "Keep-Alive");
     HttpResponse response(0);
-    httpCallback_(&response);
+    httpCallback_(req, &response);
     Buffer buf;
     response.appendToBuffer(&buf);
     conn->send(&buf);
