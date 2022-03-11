@@ -1,9 +1,8 @@
-#include "TcpConnection.h"
 #include "Channel.h"
 #include "Eventloop.h"
 #include "Socket.h"
 #include "SocketsOps.h"
-
+#include "TcpConnection.h"
 #include <errno.h>
 
 void defaultConnectionCallback(const TcpConnectionPtr &conn)
@@ -93,11 +92,13 @@ void TcpConnection::send(Buffer *message)
   {
     if(loop_->isInLoopThread())
     {
+      //std::cout<<123<<std::endl;
        sendInLoop(message->peek(), message->readableBytes());
       message->retrieveAll();
     }
     else
     {
+      //std::cout<<456<<std::endl;
       void (TcpConnection::*fp)(const StringPiece& data) = &TcpConnection::sendInLoop;
       loop_->runInLoop(std::bind(fp, this, message->retrieveAllAsString()));
     }
@@ -112,6 +113,7 @@ void TcpConnection::sendInLoop(const StringPiece &message)
 
 void TcpConnection::sendInLoop(const void *data, size_t len)
 {
+  std::cout<<"file size is:"<<len<<std::endl;
   loop_->assertInLoopThread();
   ssize_t nwrote = 0;
   size_t remaining = len;
@@ -143,6 +145,7 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
   assert(nwrote >= 0);
   if (nwrote < len)
   {
+    std::cout<<nwrote<<"is writed, and left"<<len-nwrote<<"not write"<<std::endl;
     outputBuffer_.append(static_cast<const char *>(data) + nwrote, len - nwrote);
     if (!channel_->isWriting())
     {
@@ -280,6 +283,7 @@ void TcpConnection::handleError()
 
 void TcpConnection::handleWrite()
 {
+  std::cout<<"TcpConnection::handleWrite"<<std::endl;
   loop_->assertInLoopThread();
   if (channel_->isWriting())
   {
@@ -287,9 +291,11 @@ void TcpConnection::handleWrite()
     if (n > 0)
     {
       outputBuffer_.retrieve(n);
+      std::cout<<n<<" is writen"<<std::endl;
       if (outputBuffer_.readableBytes() == 0)
       {
         //读完了
+        std::cout<<"buffer writen over"<<std::endl;
         channel_->disableWriting();
         if (state_ == Disconnecting)
         {

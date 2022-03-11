@@ -5,10 +5,11 @@
 #include "Callbacks.h"
 #include "Buffer.h"
 #include "StringPiece.h"
-
+#include "HttpContext.h"
 class Channel;
 class EventLoop;
 class Socket;
+class HttpContext;
 
 class TcpConnection: public std::enable_shared_from_this<TcpConnection>
 {
@@ -36,14 +37,14 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         void stopReadInLoop();
         bool isReading() const { return reading_; }; // NOT thread safe, may race with start/stopReadInLoop
 
-        //   void setContext(const boost::any& context)
-        //   { context_ = context; }
+          void setContext(const HttpContext& context)
+          { context_ = context; }
 
-        //   const boost::any& getContext() const
-        //   { return context_; }
+          const HttpContext& getContext() const
+          { return context_; }
 
-        //   boost::any* getMutableContext()
-        //   { return &context_; }
+          HttpContext* getMutableContext()
+          { return &context_; }
 
         void setConnectionCallback(const ConnectionCallback& cb)
         { connectionCallback_ = cb; }
@@ -104,8 +105,7 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         MessageCallback messageCallback_;
         Buffer inputBuffer_;
         Buffer outputBuffer_;
-
-
+        HttpContext context_;
 };
 
 #endif
