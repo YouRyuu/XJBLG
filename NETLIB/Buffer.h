@@ -29,8 +29,12 @@ private:
     {
         if (writableBytes() + prependableBytes() < len + kCheapPrepend)
         {
-            //当前的空闲空间不够数据的大小
-            buffer_.resize(writerIndex_ + len);
+            //当前的空闲空间不够数据的大小 .TODO:将readIndex移到初始位置
+            //if(readerIndex_!=kCheapPrepend)     //readerIndex不在初始位置了，就把数据往前移，再增加大小
+           // {
+
+           // }
+            //buffer_.resize(writerIndex_ + len);
         }
         else
         {
@@ -253,6 +257,8 @@ public:
     }
 
     ssize_t readFd(int fd, int *savedErrno);
+
+    ssize_t bufReadFd(int fd);
 };
 
 #endif

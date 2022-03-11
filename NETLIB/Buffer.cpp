@@ -37,3 +37,26 @@ ssize_t Buffer::readFd(int fd, int *savedErrno)
     }
     return n;
 }
+
+ssize_t Buffer::bufReadFd(int fd)
+{
+    int writable = writableBytes();
+    char* writeBegin = begin() + writerIndex_;
+    ssize_t n = read(fd, writeBegin, writable);
+    //如果n=0,说明读完了，n<0说明出现了错误,如果n=writable,说明可能没有读完
+    if(n < 0)
+    {
+        perror("Buffer::bufReadFd():");
+    }
+    else if((size_t)(n) < writable)
+    {
+        writerIndex_ += n;      //读完了，数据也写进buf了
+    }
+    else if(n == writable)  //  可能还没有读完，这时候需要增加buf的大小
+    {
+        writerIndex_ += n;      //先把读指针放在正确的位置
+        makeSpace(65536);       //再扩大buf的大小
+        bufReadFd(fd);      //再读一次
+    }
+    return n;
+}
