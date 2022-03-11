@@ -50,7 +50,7 @@ int main()
     TcpServer server(&loop, listenAddr, "myserver");
     server.setConnectionCallback(onConnection);
     server.setMessageCallback(onMessage);
-    server.setThreadNum(5);
+    server.setThreadNum(0);
     server.start();
     loop.loop();
     return 0;
