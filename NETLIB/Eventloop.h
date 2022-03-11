@@ -29,7 +29,7 @@ public:
     void quit();
     void runInLoop(Functor cb);
     void queueInLoop(Functor cb);
-    size_t queueSize() const;
+    size_t queueSize();
 
     void assertInLoopThread()
     {

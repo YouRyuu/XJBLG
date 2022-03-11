@@ -3,7 +3,7 @@
 #include "Epoll.h"
 #include "Mutex.h"
 #include "SocketsOps.h"
-#include <sys/eventfd.h>
+//#include <sys/eventfd.h>
 #include <algorithm>
 #include <unistd.h>
 #include <iostream>
@@ -11,20 +11,20 @@
 
 __thread EventLoop *t_loopInThread = 0;
 
-int createEventfd()
-{
-    int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (evtfd < 0)
-    {
-        std::cout << "error in createEventfd()" << std::endl;
-        abort();
-    }
-    return evtfd;
-}
+// int createEventfd()
+// {
+//     int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+//     if (evtfd < 0)
+//     {
+//         std::cout << "error in createEventfd()" << std::endl;
+//         abort();
+//     }
+//     return evtfd;
+// }
 
 EventLoop::EventLoop()
     : looping(false), eventHanding_(false), quit_(false), callingPendingFunctors_(false),
-      threadId_(CurrentThread::tid()), wakeupFd_(createEventfd()), poller_(new Poller(this)),
+      threadId_(CurrentThread::tid()), wakeupFd_(13), poller_(new Poller(this)),
       currActiveChannel_(nullptr), wakeupChannel_(new Channel(this, wakeupFd_))
 {
     if (t_loopInThread)
@@ -99,7 +99,7 @@ void EventLoop::queueInLoop(Functor cb)
     }
 }
 
-int EventLoop::queueSize() const
+size_t EventLoop::queueSize()
 {
     MutexLockGuard lock(mutex_);
     return pendingFunctors_.size();
