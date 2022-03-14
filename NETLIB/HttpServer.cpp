@@ -58,6 +58,7 @@ void HttpServer::onMessage(const TcpConnectionPtr &conn,
         printf("HttpServer::onMessage parse succ\n");
         //解析成功
         onRequest(conn, context->request());
+        context->reset();
     }
 }
 
