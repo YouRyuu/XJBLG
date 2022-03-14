@@ -236,6 +236,7 @@ public:
 
     void prepend(const void * data, size_t len)
     {
+        //在预留的那一部分插入数据
         assert(len <= prependableBytes());
         readerIndex_ -= len;
         const char *d = static_cast<const char *>(data);
