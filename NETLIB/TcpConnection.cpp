@@ -1,8 +1,9 @@
+#include "TcpConnection.h"
 #include "Channel.h"
 #include "Eventloop.h"
 #include "Socket.h"
 #include "SocketsOps.h"
-#include "TcpConnection.h"
+#include <stdio.h>
 #include <errno.h>
 
 void defaultConnectionCallback(const TcpConnectionPtr &conn)
@@ -40,6 +41,7 @@ TcpConnection::TcpConnection(EventLoop *loop,
   channel_->setErrorCallback(
       std::bind(&TcpConnection::handleError, this));
   socket_->setKeepAlive(true);
+  socket_->setTcpNoDelay(true);
 }
 
 TcpConnection::~TcpConnection()
@@ -108,13 +110,14 @@ void TcpConnection::send(Buffer *message)
 
 void TcpConnection::sendInLoop(const StringPiece &message)
 {
+  //std::cout<<"****TcpConnection::sendInLoop():"<<message.as_string()<<std::endl;
   sendInLoop(message.data(), message.size());
 }
 
 void TcpConnection::sendInLoop(const void *data, size_t len)
 {
-  std::cout<<"file size is:"<<len<<std::endl;
   loop_->assertInLoopThread();
+  //printf("*****%s\n", (const char*)data);
   ssize_t nwrote = 0;
   size_t remaining = len;
   bool faultError = false;
@@ -126,6 +129,7 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
   {
     // fd没有在写而且buf里没有要发送的数据，如果当前socket里有未发送完毕的数据，也送到buffer里去
     nwrote = write_(channel_->fd(), data, len); //先尝试用write发送数据
+    //std::cout<<"****TcpConnection::sendInLoop(data, len):nwrote:"<<nwrote<<"  size:"<<len<<std::endl;
     if (nwrote >= 0)
     {
       if (nwrote < len) //如果没有发送完毕的话就用buffer
@@ -242,18 +246,26 @@ void TcpConnection::connectDestroyed()
   channel_->remove();
 }
 
+void TcpConnection::setTcpNoDelay(bool on)
+{
+  socket_->setTcpNoDelay(on);
+}
+
 void TcpConnection::handleRead()
 {
   loop_->assertInLoopThread();
   int savedErrno = 0;
   char buf[1024];
-  ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
+  //ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
+  ssize_t n = inputBuffer_.bufReadFd(channel_->fd());
+  //printf("-----TcpConnection::handleRead()::inputBuffer:%s-----\n", inputBuffer_.getAllStringFromBuffer().c_str());
   if (n > 0)
   {
     messageCallback_(shared_from_this(), &inputBuffer_, n);
   }
   else if (n == 0)
   {
+    std::cout<<"TcpConnection::handleRead(): n=0"<<std::endl;
     handleClose();
   }
   else
@@ -271,7 +283,7 @@ void TcpConnection::handleClose()
   std::cout << "TcpConnection::handleClose" << std::endl;
   setState(Disconnected);
   channel_->disableAll();
-  TcpConnectionPtr conn(shared_from_this());
+  TcpConnectionPtr conn(shared_from_this());    //增加conn的引用计数，防止过早析构
   connectionCallback_(conn); //进入else分支，输出断开连接
   closeCallback_(conn);
 }
@@ -283,19 +295,20 @@ void TcpConnection::handleError()
 
 void TcpConnection::handleWrite()
 {
-  std::cout<<"TcpConnection::handleWrite"<<std::endl;
+  //std::cout<<"TcpConnection::handleWrite"<<std::endl;
   loop_->assertInLoopThread();
   if (channel_->isWriting())
   {
     ssize_t n = write_(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
     if (n > 0)
     {
+      //printf("-----TcpConnection::handleWrite()::outputBuffer:%s-----\n", outputBuffer_.getAllStringFromBuffer().c_str());
       outputBuffer_.retrieve(n);
-      std::cout<<n<<" is writen"<<std::endl;
+      //std::cout<<n<<" is writen"<<std::endl;
       if (outputBuffer_.readableBytes() == 0)
       {
         //读完了
-        std::cout<<"buffer writen over"<<std::endl;
+       // std::cout<<"buffer writen over"<<std::endl;
         channel_->disableWriting();
         if (state_ == Disconnecting)
         {
@@ -314,7 +327,7 @@ void TcpConnection::handleWrite()
   }
   else
   {
-    std::cout << "TcpConnection::handleWrite():Connection fd = " << channel_->fd()
-              << " is down, no more writing" << std::endl;
+    //std::cout << "TcpConnection::handleWrite():Connection fd = " << channel_->fd()
+     //         << " is down, no more writing" << std::endl;
   }
 }
