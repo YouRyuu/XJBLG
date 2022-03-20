@@ -26,7 +26,9 @@ bool HttpContext::processRequestLine(const char* begin, const char* end)
                 req_.setPath(start, problem);
             }
             start = space + 1;
-            ret = end - start == 8 && std::equal(start, end-1, "HTTP/1.");
+            bool temp = end - start == 8 && std::equal(start, end-1, "HTTP/1.");
+            if(temp==true)  ret=true;
+            else ret = false;
             if(ret)
             {
                 if(*(end-1)=='1')
@@ -77,11 +79,22 @@ bool HttpContext::parseRequest(Buffer* buf)
         }
         else if(state_ == Body)
         {
-            //读取POST的body数据
-            req_.setBody(buf->peek(), buf->beginWrite());
-            buf->retrieveAll();
-            state_ = GotAll;
-            hasMore = false;
+            //读取POST的body数据,格式:pam1=value1&pam2=value2...
+            //这里要跟header字段的content-length做比较，如果不等于说明数据接收不全
+            size_t contentLength = stoi(req_.getHeader("Content-Length"));
+            assert(contentLength>=0);
+            if(contentLength > buf->readableBytes())        //这里其实要用累计的字节数做比较，在每一次都比contentLength小的时候使用追加的方式放在body的尾端
+            {
+                //数据没有发送完全,这时应该等待下一次读取
+                hasMore = false;
+            }
+            else
+            {
+                req_.setBody(buf->peek(), buf->beginWrite());
+                buf->retrieveAll();
+                state_ = GotAll;
+                hasMore = false;
+            }
         }
         else if(state_ == Headers)      //处理头部数据
         {
@@ -106,6 +119,7 @@ bool HttpContext::parseRequest(Buffer* buf)
                     {
                         state_ = Body;
                         hasMore = true;
+                        //buf->retrieveUntil(crlf + 2);
                     }
                 }
                 buf->retrieveUntil(crlf + 2);
