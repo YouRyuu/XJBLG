@@ -64,6 +64,8 @@ class TcpConnection: public std::enable_shared_from_this<TcpConnection>
         void connectEstablished();   // should be called only once
         void connectDestroyed();  // should be called only once
 
+        void setTcpNoDelay(bool on);
+
         Buffer* inputBuffer()
         {
             return &inputBuffer_;
