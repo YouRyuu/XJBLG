@@ -1,0 +1,15 @@
+{
+    "files.associations": {
+        "new": "cpp",
+        "__config": "cpp",
+        "__debug": "cpp",
+        "__nullptr": "cpp",
+        "cstddef": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "exception": "cpp",
+        "initializer_list": "cpp",
+        "iosfwd": "cpp",
+        "type_traits": "cpp"
+    }
+}
