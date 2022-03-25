@@ -36,6 +36,8 @@ class Socket
 
         void setKeepAlive(bool on);
 
+        void setTcpNoDelay(bool on);
+
     private:
         const int sockfd_;
 };
