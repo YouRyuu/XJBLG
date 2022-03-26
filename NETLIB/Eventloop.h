@@ -8,9 +8,12 @@
 #include <pthread.h>
 #include <iostream>
 #include <vector>
+#include <functional>
+#include <memory>
 
 class Channel;
 class Poller;
+class EPoller;
 
 class EventLoop
 {
@@ -48,7 +51,7 @@ public:
     {
         return eventHanding_;
     }
-
+const pid_t threadId_;
 private:
     void abortNotInLoopThread();
     void handleRead();      //for wake up
@@ -60,9 +63,9 @@ private:
     bool eventHanding_;
     bool quit_;
     bool callingPendingFunctors_;
-    const pid_t threadId_;
+    
     int wakeupFd_;
-    std::unique_ptr<Poller> poller_;
+    std::unique_ptr<EPoller> poller_;
     ChannelList activeChannels_;
     Channel* currActiveChannel_;  
     std::vector<Functor> pendingFunctors_;
