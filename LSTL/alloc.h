@@ -2,9 +2,13 @@
 // alloc
 //负责内存的分配和回收
 
+#ifndef ALLOC_H
+#define ALLOC_H
+
 #include <new>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
 
 namespace lstl
 {
@@ -295,7 +299,7 @@ namespace lstl
     typedef default_alloc_template<0> alloc;
 
     template <class T>
-    class alloctor
+    class allocator
     {
         typedef alloc Alloc;
 
@@ -311,47 +315,48 @@ namespace lstl
         template <class T2>
         struct rebind
         {
-            typedef alloctor<T2> other;
+            typedef allocator<T2> other;
         };
 
-        alloctor() {}
-        pointer address(reference x)
+        allocator() {}
+        static pointer address(reference x)
         {
             return &x;
         }
 
-        const_pointer const_address(const_reference x)
+        static const_pointer const_address(const_reference x)
         {
             return &x;
         }
 
-        T *allocate(size_type n, const void *hint = 0)
+        static T *allocate(size_type n, const void *hint = 0)
         {
             return n != 0 ? static_cast<T *>(Alloc::allocate(n * sizeof(T))) : 0;
         }
 
-        void deallocate(pointer p, size_type n)
+        static void deallocate(pointer p, size_type n)
         {
-        Alloc:
-            deallocate(p, n * sizeof(T));
+            Alloc::deallocate(p, n * sizeof(T));
         }
 
-        size_type maxSize() const
+        static size_type maxSize()
         {
             //返回可配置T的最大容量
             // size_t是无符号整数，所以size_t(-1)返回UINT_MAX
             return size_t(-1) / sizeof(T);
         }
 
-        void construct(pointer p, const T &value)
+        static void construct(pointer p, const T &value)
         {
             new (p) T(value);
         }
 
-        void destroy(pointer p)
+        static void destroy(pointer p)
         {
             p->~T();
         }
     };
 
 } // namespace 
+
+#endif
