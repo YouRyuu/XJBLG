@@ -1,6 +1,8 @@
 //参考《STL源码剖析》一书
 // construct
 //负责对象的构造和析构
+#ifndef CONSTRUCT_H
+#define CONSTRUCT_H
 
 #include <new>
 #include "type_traits.h"
@@ -27,7 +29,7 @@ namespace lstl
     }
 
     template <class Iterator>
-    inline void destroy_aux(Iterator first, Iterator end, false_type)
+    inline void destroy_aux(Iterator first, Iterator end, _false_type)
     {
         for (; first != end; ++first)
         {
@@ -36,7 +38,7 @@ namespace lstl
     }
 
     template <class Iterator>
-    inline void destroy_aux(Iterator first, Iterator end, true_type)
+    inline void destroy_aux(Iterator first, Iterator end, _true_type)
     {
     }
 
@@ -60,3 +62,5 @@ namespace lstl
     inline void destroy(double *, double *) {}
 
 }
+
+#endif
