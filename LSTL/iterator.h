@@ -2,6 +2,9 @@
 // iterator
 //迭代器的定义
 
+#ifndef ITERATOR_H
+#define ITERATOR_H
+
 #include <new>
 
 namespace lstl
@@ -203,3 +206,5 @@ namespace lstl
     }
 
 }
+
+#endif
