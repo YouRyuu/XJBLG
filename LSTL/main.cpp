@@ -1,32 +1,44 @@
 #include <iostream>
-using namespace std;
+#include "vector.h"
 
-#include "construct.h"
-#include "iterator.h"
-//#include "type_traits.h"
-
-void test(lstl::true_type)
+class A
 {
-    cout<<"ok"<<endl;
-}
+    public:
+        A(int v):value(v){}
+        void print()
+        {
+            std::cout<<this<<" value:"<<value<<std::endl;
+        }
 
-void test(lstl::false_type)
+        ~A()
+        {
+            std::cout<<this<<" is ~"<<std::endl;
+        }
+    private:
+        int value;
+};
+
+
+void testVector()
 {
-    cout<<"no ok"<<endl;
-}
-
-template <class T>
-    void func(T *)
+    lstl::vector<A> dp;
+    std::cout << dp.size() << std::endl;
+    for (int i = 1; i <= 10; ++i)
+       dp.push_back(A(i));
+    std::cout << dp.capacity() << std::endl;
+    for (int i = 0; i < 10; ++i)
     {
-        typedef typename lstl::type_traits<T>::is_POD_type isPod;
-        test(isPod());
+       dp[i].print();
     }
-
-
+    std::cout<<"---------------"<<std::endl;
+    for (lstl::vector<A>::iterator it = dp.begin(); it != dp.end(); ++it)
+    {
+       it->print();
+    }
+}
 
 int main()
 {
-    int a = 10;
-    func(&a);
-
+    testVector();
+    return 0;
 }
