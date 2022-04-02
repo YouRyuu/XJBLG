@@ -1,6 +1,6 @@
 #include <iostream>
 #include "vector.h"
-
+#include "list.h"
 class A
 {
     public:
@@ -37,8 +37,21 @@ void testVector()
     }
 }
 
+void testList()
+{
+    lstl::list<A> lt;
+    std::cout<<lt.size()<<std::endl;
+    for(int i=1;i<10;++i)
+        lt.push_back(A(i));
+    for(int i=11;i<20;++i)
+        lt.push_front(A(i));
+    for(lstl::list<A>::iterator it = lt.begin(); it!=lt.end(); ++it)
+        it->print();
+}
+
+
 int main()
 {
-    testVector();
+    testList();
     return 0;
 }
