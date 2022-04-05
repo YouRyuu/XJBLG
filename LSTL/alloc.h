@@ -87,7 +87,7 @@ namespace lstl
 
         static P *allocate(void)
         {
-            return Alloc::allocate(sizeof(P));
+            return static_cast<P *>(Alloc::allocate(sizeof(P)));
         }
 
         static void deallocate(P *p, size_t n)
