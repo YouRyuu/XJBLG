@@ -36,7 +36,7 @@ void setNonblockAndCloseOnExec(int sockfd)
 
 int createNonblockingOrDie(sa_family_t family)
 {
-    #ifdef linux
+    #ifdef __linux__
     int sockfd = socket(family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP);
     if(sockfd < 0)
     {
