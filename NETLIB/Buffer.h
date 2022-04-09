@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string.h>
 #include <assert.h>
+#include <iostream>
 #include "StringPiece.h"
 
 class Buffer
@@ -27,14 +28,11 @@ private:
 
     void makeSpace(size_t len)
     {
+        //std::cout<<buffer_.size()<<std::endl;
         if (writableBytes() + prependableBytes() < len + kCheapPrepend)
         {
-            //当前的空闲空间不够数据的大小 .TODO:将readIndex移到初始位置
-            //if(readerIndex_!=kCheapPrepend)     //readerIndex不在初始位置了，就把数据往前移，再增加大小
-           // {
-
-           // }
-            //buffer_.resize(writerIndex_ + len);
+            //当前的空闲空间不够数据的大小
+            buffer_.resize(writerIndex_ + len);
         }
         else
         {
@@ -171,9 +169,16 @@ public:
         return retrieveAsString(readableBytes());
     }
 
+    std::string getAllStringFromBuffer()
+    {
+        std::string ret(peek(), readableBytes());
+        return ret;
+    }
+
     std::string retrieveAsString(size_t len)
     {
         //将读取的数据转换为string
+        //std::cout<<"Buffer::byte:"<<readableBytes()<<std::endl;
         assert(len <= readableBytes());
         std::string result(peek(), len);
         retrieve(len);
@@ -224,7 +229,7 @@ public:
 
     void hasWritten(size_t len)
     {
-        assert(len < writableBytes());
+        assert(len <= writableBytes());
         writerIndex_ += len;
     }
 
@@ -236,7 +241,7 @@ public:
 
     void prepend(const void * data, size_t len)
     {
-        //在预留的那一部分插入数据
+        //向头部预留空间添加信息
         assert(len <= prependableBytes());
         readerIndex_ -= len;
         const char *d = static_cast<const char *>(data);
@@ -260,6 +265,8 @@ public:
     ssize_t readFd(int fd, int *savedErrno);
 
     ssize_t bufReadFd(int fd);
+
+    ssize_t bufReadFdOnIO(int fd);
 };
 
 #endif
