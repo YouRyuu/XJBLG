@@ -4,15 +4,13 @@
 #include <string.h>
 #include <string>
 #include "../../net/Callbacks.h"
+#include "../../function.h"
 
 class Buffer;
 class ChatContext
 {
     //一个聊天程序的消息处理
     /*消息格式：
-     *                      长度  状态码4字节    8字节    8字节   8字节 
-     *  00 00 00 00 00 00 00 00     code      sender  recver  time  body
-     * ｜    prepend          ｜
      * 状态码：1开头的代表系统和用户之间直接交互消息，2开头的代表用户之间的消息
      * 1000:操作成功
      * 1001:请求登录  1002:请求好友列表  1003:搜索用户  1004:删除好友  1005:添加好友
@@ -23,6 +21,7 @@ class ChatContext
      *     客户端对它发出的每个请求维护一个请求队列，每个请求都会有一个序列号（这里用time字段代替），在服务器返回对客户端的响应的时候
      *     对于的序列号字段就是某个请求的序列号，客户端在收到回馈之后，在队列里找到这个请求，将这个请求出队，然后执行相应的回调函数。
      * 2001:用户A给用户B发消息
+     * 
      */
     public:
         typedef std::function<void(const TcpConnectionPtr&, ChatContext, int)> ContextMessageCallback;
@@ -33,8 +32,6 @@ class ChatContext
         :contextMessageCallback(cb)
         {
         }
-
-        bool parse(Buffer *buf);
 
         void onMessage(const TcpConnectionPtr &conn, Buffer *buf, int n);
 
@@ -97,6 +94,7 @@ class ChatContext
         std::string time_;          //发送时间戳
         std::string body_;          //消息正文
         ContextMessageCallback contextMessageCallback;
+        JsonItem jsonItem_;
 };
 
 #endif

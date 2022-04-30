@@ -40,28 +40,44 @@ public:
         tcpServer_.start();
     }
     void sendMessage(const TcpConnectionPtr &conn, std::string msg);
-    void sendMessage(const TcpConnectionPtr &conn, std::string code, std::string sender, std::string recver, std::string time, std::string body);
+    void sendMessage(const TcpConnectionPtr &conn, std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList=false);
     void cacheMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body);
-    //功能函数：获取用户在线状态、获取用户的好友列表、获取用户的信息
     bool getUserState(std::string userId);
     std::vector<std::pair<std::string, std::string>> getUserFriends(std::string userId);
-    std::string userFriendsToString(std::vector<std::pair<std::string, std::string>> /*&*/friends);
+    std::string userFriendsToString(std::vector<std::pair<std::string, std::string>> /*&*/ friends);
+    std::string getUserInfo(std::string userID);
+    FriendState checkIsFriend(std::string user1ID, std::string user2ID);
+    std::string encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList);
+    bool agreeRequestOfAddFriend(std::string userID, std::string applyID);
+    void doLoginAction(const TcpConnectionPtr &conn, std::string userID, std::string password);
+    void doGetFriendsListAction(const TcpConnectionPtr &conn, std::string userID);
+    void doAddFriendAction(const TcpConnectionPtr &conn, std::string userID, std::string addedID);
+    void doGetUserMessageAction(const TcpConnectionPtr &conn, std::string userID, std::string searchID);
+    void doAgreeReqOfAddFriend(const TcpConnectionPtr &conn, std::string userID, std::string applyID);
+    void doRefuseReqOfAddFriend(const TcpConnectionPtr &conn, std::string userID, std::string applyID);
+    void doSendMessageAction(const TcpConnectionPtr &conn, std::string code, std::string sendID, std::string recvID, std::string sendTime, std::string message);
+    void doGetMyFriendReqAction(const TcpConnectionPtr &conn, std::string userID);
+    void doOfflineNotifyAction(std::string userID);
+    void doOnlineNotifyAction(std::string userID);
+    void doDeleteFriendAction(const TcpConnectionPtr &conn, std::string userID, std::string deleteID);
+    void sendOfflineMessageAction(const TcpConnectionPtr &conn, std::string userID);
+    std::string getNowTime();
 private:
     void onConnection(const TcpConnectionPtr &conn);
-    void onMessage(const TcpConnectionPtr &conn, Buffer *buf, int n);
-    void onContextMessage(const TcpConnectionPtr conn, ChatContext chatContext, int n);
-    void onRequest(const TcpConnectionPtr &conn, ChatContext & chatContext);
+    void onContextMessage(const TcpConnectionPtr &conn, ChatContext chatContext, int n);
+    void onRequest(const TcpConnectionPtr &conn, ChatContext &chatContext);
     bool loginValid(const std::string userid, const std::string password);
-    const static int systemId = 10000000;
+    bool checkUserIsExist(std::string userID);
+    const static std::string systemId;
     TcpServer tcpServer_;
-    //typedef std::map<TcpConnectionPtr, std::string> UserConnMap;
     typedef std::map<std::string, TcpConnectionPtr> UserConnMap;
-    typedef std::map<std::string, std::vector<std::string>> CachedMessages;      //缓存的消息
+    typedef std::map<std::string, std::vector<std::string>> CachedMessages; //缓存的消息
     UserConnMap userConnMaps_;
     CachedMessages cachedMessages_;
     MutexLock mutex;
     ChatContext chatContext_;
-    ChatModel model_;
+    UserModel userModel_;
+    JsonItem jsonItem_;
 };
 
 #endif

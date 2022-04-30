@@ -28,40 +28,13 @@ void ChatClient::onConnection(const TcpConnectionPtr &conn)
     {
         connection_ = conn;
         //给服务端发登录消息
-        sendMessage("1001", userId_, "10000000", "99999999", password_);
+        sendMessage("1001", userId_, "10000000", "9999999999", password_);
     }
     else //连接建立失败
     {
         std::cout << "连接建立失败" << std::endl;
         connection_.reset();
     }
-}
-void ChatClient::onMessage(const TcpConnectionPtr &conn, Buffer *buf, int n)
-{
-    std::cout << buf->getAllStringFromBuffer() << std::endl;
-    //对收到的消息进行解码
-    //使用while是因为如果一起发送多条消息的时候很可能合并到一起发送了，也就是说buf里的消息没有解析完，还有剩下的一条完整的消息
-    //这是在处理发送缓存消息的时候发现的
-    // while (buf->readableBytes() > 0)
-    //{
-    if (chatContext_.parse(buf))
-    {
-        std::string code = chatContext_.getCode();
-        std::string sender = chatContext_.getSender();
-        std::string recver = chatContext_.getRevcer();
-        std::string time = chatContext_.getTime();
-        std::string body = chatContext_.getBody();
-        if (code == "2001")
-        {
-            printf("用户%s于%s给您发来的消息:%s\n", sender.c_str(), time.c_str(), body.c_str());
-        }
-        // else
-        else if (code == "1000")
-        {
-            std::cout << "成功" << std::endl;
-        }
-    }
-    //}
 }
 
 void ChatClient::onContextMessage(const TcpConnectionPtr conn, ChatContext chatContext, int n)
@@ -78,7 +51,7 @@ void ChatClient::onContextMessage(const TcpConnectionPtr conn, ChatContext chatC
     // else
     else if (code == "1000")
     {
-        std::cout << "成功" << std::endl;
+        std::cout<<body.c_str()<<std::endl;
     }
     else if(code=="1020")
     {
@@ -90,10 +63,29 @@ void ChatClient::onContextMessage(const TcpConnectionPtr conn, ChatContext chatC
     }
 }
 
+std::string ChatClient::encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body)
+{
+    //---------------------------//
+    //{"code":"1111","sender":"1122","recver":"3344","time":"222222222","body":"xxxxx"}
+    std::string msg("{\"code\":\"");
+    msg = msg + code;
+    msg = msg + "\",\"sender\":\"";
+    msg = msg + sender;
+    msg = msg + "\",\"recver\":\"";
+    msg = msg + recver;
+    msg = msg + "\",\"time\":\"";
+    msg = msg + time;
+    msg = msg + "\",\"body\":\"";
+    msg = msg + body;
+    msg = msg +"\"}";
+    return msg;
+}
+
 void ChatClient::sendMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body)
 {
     Buffer message;
-    std::string context = code + sender + recver + time + body;
+    //std::string context = code + sender + recver + time + body;
+    std::string context = encodeMessage(code, sender, recver, time, body);
     message.append(context);
     int32_t len = static_cast<int32_t>(context.size());
     int32_t be32 = hostToNetwork32(len);
@@ -103,16 +95,47 @@ void ChatClient::sendMessage(std::string code, std::string sender, std::string r
 
 void ChatClient::send(std::string &line) //用于发送来自stdin的
 {
-    if(line[0]=='f')
+    if(line[0]=='l')
     {
-        sendMessage("1002", userId_, "10000000", "99999999", line);
+        //请求好友列表
+        sendMessage("1002", userId_, "10000000", "999999999", line);
+    }
+    
+    else if(line[0]=='a')
+    {   //a 添加好友
+        std::string body = line.substr(1);
+        sendMessage("1005", userId_, "10000000", "999999999", body);
+    }
+    else if(line[0]=='u')
+    {
+        //获取用户资料
+        std::string body = line.substr(1);
+        sendMessage("1006", userId_, "10000000", "999999999", body);
+    }
+    else if(line[0]=='g')
+    {
+        //同意好友申请
+        std::string body = line.substr(1);
+        sendMessage("1007", userId_, "10000000", "999999999", body);
+    }
+    else if(line[0]=='r')
+    {
+        //拒绝好友申请
+        std::string body = line.substr(1);
+        sendMessage("1008", userId_, "10000000", "999999999", body);
+    }
+    else if(line[0]=='z')
+    {
+        //查看好友申请
+        std::string body = line.substr(1);
+        sendMessage("1009", userId_, "10000000", "999999999", body);
     }
     else
-        sendMessage("2001", userId_, "22222222", "99999999", line);
+        sendMessage("2001", userId_, "22222222", "999999999", line);     //发消息
 }
 
 void ChatClient::sendMessageTo(std::string message, std::string recver)
 {
     //发送消息给好友
-    sendMessage("2001", userId_, recver, "99999999", message);
+    sendMessage("2001", userId_, recver, "999999999", message);
 }

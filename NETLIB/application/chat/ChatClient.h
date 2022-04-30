@@ -9,6 +9,7 @@
 class EventLoop;
 class InetAddress;
 
+
 class ChatClient
 {
     public:
@@ -27,6 +28,7 @@ class ChatClient
         void sendMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body);
         void send(std::string &line);
         void sendMessageTo(std::string message, std::string recver);
+        std::string encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body);
     private:
         //连接建立完成之后会调用这个函数
         void onConnection(const TcpConnectionPtr &conn);
