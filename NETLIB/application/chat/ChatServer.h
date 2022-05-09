@@ -39,16 +39,15 @@ public:
     {
         tcpServer_.start();
     }
+    //消息相关函数
     void sendMessage(const TcpConnectionPtr &conn, std::string msg);
-    void sendMessage(const TcpConnectionPtr &conn, std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList=false);
-    void cacheMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body);
-    bool getUserState(std::string userId);
-    std::vector<std::pair<std::string, std::string>> getUserFriends(std::string userId);
-    std::string userFriendsToString(std::vector<std::pair<std::string, std::string>> /*&*/ friends);
-    std::string getUserInfo(std::string userID);
-    FriendState checkIsFriend(std::string user1ID, std::string user2ID);
-    std::string encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList);
-    bool agreeRequestOfAddFriend(std::string userID, std::string applyID);
+    void sendMessage(const TcpConnectionPtr &conn, std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList = false);
+    void sendMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList = false);
+    void cacheMessage(std::string recver, std::string message);
+    std::pair<std::string, std::string> encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList);
+    void sendOfflineMessageAction(const TcpConnectionPtr &conn, std::string userID);
+    void sendHeartPacket();     //发送心跳包
+    //处理用户操作相关函数
     void doLoginAction(const TcpConnectionPtr &conn, std::string userID, std::string password);
     void doGetFriendsListAction(const TcpConnectionPtr &conn, std::string userID);
     void doAddFriendAction(const TcpConnectionPtr &conn, std::string userID, std::string addedID);
@@ -60,20 +59,38 @@ public:
     void doOfflineNotifyAction(std::string userID);
     void doOnlineNotifyAction(std::string userID);
     void doDeleteFriendAction(const TcpConnectionPtr &conn, std::string userID, std::string deleteID);
-    void sendOfflineMessageAction(const TcpConnectionPtr &conn, std::string userID);
-    std::string getNowTime();
-private:
-    void onConnection(const TcpConnectionPtr &conn);
-    void onContextMessage(const TcpConnectionPtr &conn, ChatContext chatContext, int n);
-    void onRequest(const TcpConnectionPtr &conn, ChatContext &chatContext);
+    void doAckAction(std::string seq);
+    void doOvertimeAction(std::string seq);
+
+    //服务端内部逻辑相关函数
+    bool getUserState(std::string userId);
+    std::vector<std::pair<std::string, std::string>> getUserFriends(std::string userId);
+    std::string userFriendsToString(std::vector<std::pair<std::string, std::string>> /*&*/ friends);
+    std::string getUserInfo(std::string userID);
+    FriendState checkIsFriend(std::string user1ID, std::string user2ID);
+    bool agreeRequestOfAddFriend(std::string userID, std::string applyID);
+    void insertMessageToWindow(std::string seq, std::string recver, std::string message);
+    void deleteMessageFromWindow(std::string seq);
     bool loginValid(const std::string userid, const std::string password);
     bool checkUserIsExist(std::string userID);
+    void printNowMessageWindow();
+    void handleNotAckMessage(std::string seq, bool heart);
+    void closeOvertimeConn(std::string userID);
+
+private:
+    void onConnection(const TcpConnectionPtr &conn);
+    void onContextMessage(const TcpConnectionPtr &conn, ChatContext &chatContext, int n);
+    void onRequest(const TcpConnectionPtr &conn, ChatContext &chatContext);
+
     const static std::string systemId;
     TcpServer tcpServer_;
-    typedef std::map<std::string, TcpConnectionPtr> UserConnMap;
-    typedef std::map<std::string, std::vector<std::string>> CachedMessages; //缓存的消息
+    typedef std::map<std::string, WeakTcpConnectionPtr> UserConnMap;
+    typedef std::map<std::string, std::vector<std::string>> CachedMessages;           //缓存的消息
+    typedef std::map<std::string, std::pair<std::string, std::string>> MessageWindow; //消息窗口      {seq, {recver,message}}
+    typedef UserConnMap::iterator UserConnMapsIt;
     UserConnMap userConnMaps_;
     CachedMessages cachedMessages_;
+    MessageWindow messageWindow_;
     MutexLock mutex;
     ChatContext chatContext_;
     UserModel userModel_;

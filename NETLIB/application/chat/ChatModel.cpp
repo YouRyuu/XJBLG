@@ -16,7 +16,7 @@ std::string UserModel::getUserInfo(std::string userID)
     {
         ret = "{\"userid\":\"0\"}";
     }
-    else
+    else 
     {
         assert(res->rowsCount() == 1);
         //序列化结果
@@ -161,6 +161,9 @@ void UserModel::deleteFriend(std::string userID, std::string deleteID)
 bool UserModel::checkRequestOfAddFriend(std::string userID, std::string applyID)
 {
     //查询userID是否有被applyID加好友的请求
+    //state=0:已经申请添加好友且未处理
+    //state=1:同意了好友请求
+    //state=2:拒绝了好友请求
     std::string sql("select state from addFriends where applyUser=");
     sql = sql + applyID;
     sql = sql + " and addedUser=";
@@ -181,10 +184,14 @@ bool UserModel::checkRequestOfAddFriend(std::string userID, std::string applyID)
 
 void UserModel::refuseRequestOfAddFriend(std::string userID, std::string applyID)
 {
-    std::string sql("update addFriends set state=2 where applyUser=");
+//update addFriends inner join (select autoID from addFriends where applyUser=11111111 and addedUser=33333333 and state=2 
+//order by autoID desc limit 1) t on addFriends.autoID=t.autoID set state=1
+
+    std::string sql("update addFriends inner join (select autoID from addFriends where applyUser=");
     sql = sql + applyID;
     sql = sql + (" and addedUser=");
     sql = sql + userID;
+    sql = sql + (" and state=0 order by autoID desc limit 1) t on addFriends.autoID=t.autoID set state=2");
     MysqlDB db;
     MysqlDB::ResultSetPtr res;
     res = db.execute(sql);

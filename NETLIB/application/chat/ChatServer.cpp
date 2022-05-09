@@ -11,6 +11,7 @@ ChatServer::ChatServer(EventLoop *loop, const InetAddress &listenAddr, const std
 {
     tcpServer_.setConnectionCallback(std::bind(&ChatServer::onConnection, this, std::placeholders::_1));
     tcpServer_.setMessageCallback(std::bind(&ChatContext::onMessage, &chatContext_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+    loop->runEvery(60, std::bind(&ChatServer::sendHeartPacket, this));
 }
 
 void ChatServer::onConnection(const TcpConnectionPtr &conn)
@@ -28,9 +29,9 @@ void ChatServer::onConnection(const TcpConnectionPtr &conn)
         std::string userID;
         {
             MutexLockGuard lock(mutex);
-            for (std::map<std::string, TcpConnectionPtr>::iterator it = userConnMaps_.begin(); it != userConnMaps_.end(); ++it)
+            for (std::map<std::string, WeakTcpConnectionPtr>::iterator it = userConnMaps_.begin(); it != userConnMaps_.end(); ++it)
             {
-                if (it->second == conn)
+                if ((it->second).lock() == conn)
                 {
                     userID = it->first;
                     userConnMaps_.erase(it);
@@ -38,25 +39,21 @@ void ChatServer::onConnection(const TcpConnectionPtr &conn)
                 }
             }
         }
-        if (userID.size() > 0)      //因为如果用户是被挤下去的话，在登录处理里面这个连接就会被删掉，此时获取不到userID。
+        if (userID.size() > 0) //因为如果用户是被挤下去的话，在登录处理里面这个连接就会被删掉，此时获取不到userID。
             doOfflineNotifyAction(userID);
     }
 }
 
-void ChatServer::onContextMessage(const TcpConnectionPtr &conn, ChatContext chatContext, int n)
+void ChatServer::onContextMessage(const TcpConnectionPtr &conn, ChatContext &chatContext, int n)
 {
-    //if(n)       //正确的请求
-        onRequest(conn, chatContext);
-   // else        //错误的请求
-   // {
-   //     conn->shutdown();
-   // }
+    onRequest(conn, chatContext);
 }
 
 void ChatServer::onRequest(const TcpConnectionPtr &conn, ChatContext &chatContext)
 {
     int32_t length = chatContext_.getLength();
     std::string code = chatContext_.getCode();
+    std::string seq = chatContext_.getSeq();
     std::string sender = chatContext_.getSender();
     std::string recver = chatContext_.getRevcer();
     std::string time = chatContext_.getTime();
@@ -65,6 +62,11 @@ void ChatServer::onRequest(const TcpConnectionPtr &conn, ChatContext &chatContex
     if (code == "1001")
     {
         doLoginAction(conn, sender, body);
+    }
+    else if (code == "1111")
+    {
+        //确认ack消息
+        doAckAction(body);
     }
     else if (code == "1002")
     {
@@ -91,10 +93,19 @@ void ChatServer::onRequest(const TcpConnectionPtr &conn, ChatContext &chatContex
         //拒绝好友申请
         doRefuseReqOfAddFriend(conn, sender, body);
     }
-    else if(code=="1009")
+    else if (code == "1009")
     {
         //查看好友申请
         doGetMyFriendReqAction(conn, sender);
+    }
+    else if (code == "1010")
+    {
+        //删除好友
+        doDeleteFriendAction(conn, sender, body);
+    }
+    else if(code=="1011")
+    {
+        //心跳包
     }
     else if (code == "2001")
     {
@@ -117,13 +128,16 @@ void ChatServer::sendMessage(const TcpConnectionPtr &conn, std::string msg)
     conn->send(&message);
 }
 
-std::string ChatServer::encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList)
+std::pair<std::string, std::string> ChatServer::encodeMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList)
 {
     //---------------------------//
-    //{"code":"1111","sender":"1122","recver":"3344","time":"222222222","body":"xxxxx"}
+    //{"code":"1111","seq":"45636","sender":"1122","recver":"3344","time":"222222222","body":"xxxxx"}
     //{"code":"1","userid":"11111111","username":"bm"}
+    std::string seq = getSeq(); //获取一个随机的序列号
     std::string msg("{\"code\":\"");
     msg = msg + code;
+    msg = msg + "\",\"seq\":\"";
+    msg = msg + seq;
     msg = msg + "\",\"sender\":\"";
     msg = msg + sender;
     msg = msg + "\",\"recver\":\"";
@@ -142,31 +156,78 @@ std::string ChatServer::encodeMessage(std::string code, std::string sender, std:
         msg = msg + body;
         msg = msg + "}";
     }
-
-    return msg;
+    insertMessageToWindow(seq, recver, msg);
+    std::cout << "发送序列号为:" << seq << "的消息" << std::endl;
+    return {seq, msg};
 }
 
 void ChatServer::sendMessage(const TcpConnectionPtr &conn, std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList)
 {
-    std::string context = encodeMessage(code, sender, recver, time, body, bodyIsList);
-    sendMessage(conn, context);
+    //消息处理逻辑：
+    //用户不在线：直接存到离线消息中
+    //用户在线：
+    //      将消息存放到消息窗口,并注册消息超时函数
+    //          如果消息得到确认：
+    //              将消息从窗口中移除
+    //          如果消息没有得到确认（超时，这时可认为客户离线了）：
+    //              将消息存放到离线消息中
+    //              在窗口中移除此消息
+    //              清除该离线的用户
+    std::pair<std::string, std::string> context = encodeMessage(code, sender, recver, time, body, bodyIsList);
+    if (!conn) // recver用户不在线
+    {
+        cacheMessage(recver, context.second);
+    }
+    else
+    {
+        //注册超时函数
+        //
+        if(code!="1011")        //不是心跳包
+            conn->getLoop()->runAfter(30, std::bind(&ChatServer::handleNotAckMessage, this, context.first, false));
+        else
+            conn->getLoop()->runAfter(30, std::bind(&ChatServer::handleNotAckMessage, this, context.first, true));
+        sendMessage(conn, context.second);
+    }
 }
 
-void ChatServer::cacheMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body)
+void ChatServer::sendMessage(std::string code, std::string sender, std::string recver, std::string time, std::string body, bool bodyIsList)
 {
-    std::string message = encodeMessage(code, sender, recver, time, body, false);
+    if (getUserState(recver)) //用户在线
     {
-        MutexLockGuard lock(mutex);
-        std::map<std::string, std::vector<std::string>>::iterator it = cachedMessages_.find(recver);
-        if (it != cachedMessages_.end()) //已经有了recver的缓存消息
-        {
-            it->second.push_back(message);
-        }
-        else //此前没有此用户的要接收消息
-        {
-            cachedMessages_.insert({recver, {message}});
-        }
+        TcpConnectionPtr recvConn = userConnMaps_.find(recver)->second.lock();
+        sendMessage(recvConn, code, sender, recver, time, body, bodyIsList);
     }
+    else
+    {
+        //该用户不在线，把消息缓存起来
+        sendMessage(nullptr, code, sender, recver, time, body, bodyIsList);
+    }
+}
+
+void ChatServer::cacheMessage(std::string recver, std::string message)
+{
+    MutexLockGuard lock(mutex);
+    std::map<std::string, std::vector<std::string>>::iterator it = cachedMessages_.find(recver);
+    if (it != cachedMessages_.end()) //已经有了recver的缓存消息
+    {
+        it->second.push_back(message);
+    }
+    else //此前没有此用户的要接收消息
+    {
+        cachedMessages_.insert({recver, {message}});
+    }
+}
+void ChatServer::insertMessageToWindow(std::string seq, std::string recver, std::string message)
+{
+    assert(messageWindow_.count(seq) == 0);
+    messageWindow_[seq] = {recver, message};
+}
+
+void ChatServer::deleteMessageFromWindow(std::string seq)
+{
+    assert(messageWindow_.count(seq) == 1);
+    messageWindow_.erase(seq);
+    std::cout << "清除序列号为" << seq << "的消息" << std::endl;
 }
 
 bool ChatServer::getUserState(std::string userId)
@@ -177,7 +238,7 @@ bool ChatServer::getUserState(std::string userId)
     bool state = false;
     {
         MutexLockGuard lock(mutex);
-        std::map<std::string, TcpConnectionPtr>::iterator it = userConnMaps_.find(userId);
+        std::map<std::string, WeakTcpConnectionPtr>::iterator it = userConnMaps_.find(userId);
         if (it != userConnMaps_.end())
             state = true;
         else
@@ -272,19 +333,28 @@ void ChatServer::doLoginAction(const TcpConnectionPtr &conn, std::string userID,
         if (getUserState(userID)) //用户已经在线
         {
             TcpConnectionPtr preConn;
+            UserConnMapsIt it;
             {
                 MutexLockGuard lock(mutex);
-                preConn = userConnMaps_[userID];
+                it = userConnMaps_.find(userID);
+                if (it != userConnMaps_.end())
+                {
+                    preConn = it->second.lock();
+                }
                 userConnMaps_.erase(userID); //删除旧连接，添加新连接
             }
             //这里要给原客户发一条消息，提示它被挤出去了
-            sendMessage(preConn, "1012", systemId, userID, getNowTime(), "被挤占下线", false);
-            preConn->shutdown();
-            preConn.reset();
+            if (preConn)
+            {
+                sendMessage(preConn, "1012", systemId, userID, getNowTime(), "被挤占下线", false);
+                preConn->shutdown();
+                preConn.reset();
+            }
         }
+        WeakTcpConnectionPtr wConn(conn);
         {
             MutexLockGuard lock(mutex);
-            userConnMaps_.insert({userID, conn});
+            userConnMaps_.insert({userID, wConn});
         }
         //给客户端发消息说登录成功
         //同时需要找到当用户不在线时，是否有别的用户给这位用户发消息，在这里把这些消息也要发送给他
@@ -292,7 +362,7 @@ void ChatServer::doLoginAction(const TcpConnectionPtr &conn, std::string userID,
         //这里要用redis来做用户的收件箱， 从收件箱中找有没有没收到的信息
         // key=userid, value=[msg1, msg2, ...]
         sendOfflineMessageAction(conn, userID);
-        doOnlineNotifyAction(userID);       //通知他的好友他上线了
+        doOnlineNotifyAction(userID); //通知他的好友他上线了
     }
     else
     {
@@ -333,17 +403,7 @@ void ChatServer::doAddFriendAction(const TcpConnectionPtr &conn, std::string use
                 //不是好友关系，发送好友申请
                 sendMessage(conn, "1000", systemId, userID, getNowTime(), "已发送好友申请!", false);
                 userModel_.addFriend(userID, addedID);
-                if (getUserState(addedID)) //被加的用户在线
-                {
-                    TcpConnectionPtr recvConn = userConnMaps_[addedID];
-                    sendMessage(recvConn, "1005", systemId, addedID, getNowTime(), userID + "申请加您为好友!", false);
-                }
-                else
-                {
-                    //该用户不在线，把消息缓存起来
-                    cacheMessage("1005", systemId, addedID, getNowTime(), userID + "申请加您为好友!");
-                    // std::cout << body << "不在线" << std::endl;
-                }
+                sendMessage("1005", systemId, addedID, getNowTime(), userID + "申请加您为好友!");
             }
             else
             {
@@ -393,6 +453,7 @@ void ChatServer::doAgreeReqOfAddFriend(const TcpConnectionPtr &conn, std::string
     {
         sendMessage(conn, "1007", systemId, userID, getNowTime(), "您已同意好友请求！" + applyID, false);
         //给apply发一个消息说请求通过
+        sendMessage("1007", systemId, applyID, getNowTime(), userID + "已同意您的好友请求!");
     }
 }
 
@@ -400,7 +461,7 @@ void ChatServer::doRefuseReqOfAddFriend(const TcpConnectionPtr &conn, std::strin
 {
     //处理好友申请
     // code=1008,body=要同意的那个人的userid
-    //现在addFriends表中查看是不是userid有加这个人的请求
+    //现在addFriends表中查看是不是userid有加这个人的请求.如果有，将state改为拒绝
     //发送一条消息给userid，告诉他添加失败
     bool existReq = userModel_.checkRequestOfAddFriend(userID, applyID);
     if (!existReq)
@@ -409,6 +470,7 @@ void ChatServer::doRefuseReqOfAddFriend(const TcpConnectionPtr &conn, std::strin
     {
         userModel_.refuseRequestOfAddFriend(userID, applyID);
         //给apply发消息说请求被拒绝
+        sendMessage("1008", systemId, applyID, getNowTime(), userID + "拒绝了您的好友请求!");
     }
 }
 
@@ -422,20 +484,13 @@ void ChatServer::doSendMessageAction(const TcpConnectionPtr &conn, std::string c
     //要先判断recver是不是sender的好友。如果是，如果在线，直接发送，如果不在线，缓存消息
     //如果不是好友关系，则返回发送失败
     //系统账号可以给所有人发消息
+    //在这里有个问题：服务端转发完消息后要确认客户端是否收到
+    //即服务端在转发完消息之后要等待客户端的回执
+    //如果在规定的时间内服务端没有等到回执，就认为对方连接意外关闭了，要把消息存在离线消息里面，并且踢掉这个超时的连接
     FriendState isFriend = checkIsFriend(sendID, recvID);
     if (isFriend == FRIEND) //存在好友关系
     {
-        if (getUserState(recvID)) //用户在线
-        {
-            TcpConnectionPtr recvConn = userConnMaps_[recvID];
-            sendMessage(recvConn, code, sendID, recvID, sendTime, message, false);
-        }
-        else
-        {
-            //该用户不在线，把消息缓存起来
-            cacheMessage(code, sendID, recvID, sendTime, message);
-            std::cout << recvID << "不在线" << std::endl;
-        }
+        sendMessage(code, sendID, recvID, sendTime, message);
     }
     else //不存在好友关系
     {
@@ -446,8 +501,8 @@ void ChatServer::doSendMessageAction(const TcpConnectionPtr &conn, std::string c
 void ChatServer::doGetMyFriendReqAction(const TcpConnectionPtr &conn, std::string userID)
 {
     //查看我的好友申请：分为我申请加的和申请加我的
-    std::vector<std::pair<std::string, std::string>> listOfIAdd = userModel_.getAddReqList(userID);       //我主动发起添加的
-    std::vector<std::pair<std::string, std::string>> listOfIAdded = userModel_.getAddedReqList(userID);     //添加我的请求
+    std::vector<std::pair<std::string, std::string>> listOfIAdd = userModel_.getAddReqList(userID);     //我主动发起添加的
+    std::vector<std::pair<std::string, std::string>> listOfIAdded = userModel_.getAddedReqList(userID); //添加我的请求
     sendMessage(conn, "1000", systemId, userID, getNowTime(), userFriendsToString(listOfIAdd), true);
     sendMessage(conn, "1000", systemId, userID, getNowTime(), userFriendsToString(listOfIAdded), true);
 }
@@ -462,7 +517,7 @@ void ChatServer::doOfflineNotifyAction(std::string userID)
         if (state)
         {
             //如果在线的话向该朋友发送通知
-            TcpConnectionPtr fConn = userConnMaps_[f.first]; // fix:这里会有问题，需要修复，要加锁
+            TcpConnectionPtr fConn = userConnMaps_[f.first].lock(); // fix:这里会有问题，需要修复，要加锁
             sendMessage(fConn, "1000", systemId, f.first, getNowTime(), "您的朋友已下线！:" + userID, false);
         }
     }
@@ -478,7 +533,7 @@ void ChatServer::doOnlineNotifyAction(std::string userID)
         if (state)
         {
             //如果在线的话向该朋友发送通知
-            TcpConnectionPtr fConn = userConnMaps_[f.first]; // fix:这里会有问题，需要修复，要加锁
+            TcpConnectionPtr fConn = userConnMaps_[f.first].lock(); // fix:这里会有问题，需要修复，要加锁
             sendMessage(fConn, "1000", systemId, f.first, getNowTime(), "您的朋友已上线！:" + userID, false);
         }
     }
@@ -489,7 +544,7 @@ void ChatServer::doDeleteFriendAction(const TcpConnectionPtr &conn, std::string 
     //删除好友
     //首先查看是否存在好友关系
     FriendState state = checkIsFriend(userID, deleteID);
-    if(state==FRIEND)
+    if (state == FRIEND)
     {
         userModel_.deleteFriend(userID, deleteID);
         sendMessage(conn, "1000", systemId, userID, getNowTime(), "删除成功!");
@@ -525,15 +580,87 @@ void ChatServer::sendOfflineMessageAction(const TcpConnectionPtr &conn, std::str
     }
 }
 
-std::string ChatServer::getNowTime()
+void ChatServer::doAckAction(std::string seq)
 {
-    time_t now = time(0);
-    tm *ltm = localtime(&now);
-    std::string year = std::to_string(1900 + ltm->tm_year) + "/";
-    std::string month = std::to_string(1 + ltm->tm_mon) + "/";
-    std::string day = std::to_string(ltm->tm_mday) + " ";
-    std::string hour = std::to_string(ltm->tm_hour) + ":";
-    std::string mins = std::to_string(ltm->tm_min) + ":";
-    std::string sec = std::to_string(ltm->tm_sec);
-    return year + month + day + hour + mins + sec;
+    //确认ack，删除消息窗口中的函数，并删除注册的超时函数
+    assert(messageWindow_.count(seq) == 1);
+    messageWindow_.erase(seq);
+    std::cout << "删除ack:" << seq << std::endl;
+    // debug用
+    // printNowMessageWindow();
 }
+
+void ChatServer::doOvertimeAction(std::string seq)
+{
+    //处理超时的窗口消息
+    assert(messageWindow_.count(seq) != 0);
+    auto it = messageWindow_.find(seq);
+    std::string recver = (it->second).first;
+    std::string message = (it->second).second;
+    cacheMessage(recver, message);
+}
+
+void ChatServer::printNowMessageWindow()
+{
+    if (messageWindow_.size() == 0)
+        printf("MessageWindow now is NULL\n");
+    else
+    {
+        for (auto it = messageWindow_.begin(); it != messageWindow_.end(); ++it)
+        {
+            printf("seq:[%s], recver:[%s], message:[%s]\n", it->first.c_str(), it->second.first.c_str(), it->second.second.c_str());
+        }
+    }
+}
+
+void ChatServer::handleNotAckMessage(std::string seq, bool heart)
+{
+    //处理消息窗口中超时的消息
+    //利用定时器处理，在将消息插入到消息窗口后，激活一个定时器，函数的参数是那个要被监视的seq
+    //如果定时器到期，检查该消息是否还在消息窗口中，如果还在，就把它加入到离线消息中，然后调用踢掉超时连接操作
+    //如果是心跳包，则不缓存消息
+    if(messageWindow_.count(seq)==0)
+    {
+        std::cout<<"seq already pop from mw"<<std::endl;
+        return;
+    }
+    else
+    {
+        auto mw = messageWindow_.find(seq);
+        assert(mw!=messageWindow_.end());
+        if(!heart)      //不是心跳包，存入缓存
+            cacheMessage(mw->second.first, mw->second.second);
+        closeOvertimeConn(mw->second.first);
+        messageWindow_.erase(seq);
+        std::cout<<seq<<"的消息已超时"<<std::endl;
+    }
+}
+
+void ChatServer::closeOvertimeConn(std::string userID)
+{
+    //强制踢出超时连接
+    auto conn = userConnMaps_.find(userID);
+    if(conn==userConnMaps_.end())
+    {
+        std::cout<<"userID already exit from userConnMaps"<<std::endl;
+        return;
+    }
+    else
+    {
+        TcpConnectionPtr connptr = conn->second.lock();
+        userConnMaps_.erase(conn);
+        connptr->shutdown();
+        std::cout<<userID<<"断开连接，已被踢出"<<std::endl;
+    }
+}
+
+void ChatServer::sendHeartPacket()     //发送心跳包
+{
+    UserConnMapsIt userIt;
+    for(userIt=userConnMaps_.begin(); userIt!=userConnMaps_.end(); ++userIt)
+    {
+        TcpConnectionPtr conn = userIt->second.lock();
+        sendMessage(conn, "1011", systemId, userIt->first, getNowTime(), "heart");
+    }
+}
+

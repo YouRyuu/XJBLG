@@ -24,7 +24,7 @@ class ChatContext
      * 
      */
     public:
-        typedef std::function<void(const TcpConnectionPtr&, ChatContext, int)> ContextMessageCallback;
+        typedef std::function<void(const TcpConnectionPtr&, ChatContext&, int)> ContextMessageCallback;
         ChatContext()/*:state_(TYPE)*/
         {   }
 
@@ -75,6 +75,11 @@ class ChatContext
             return length;
         }
 
+        std::string getSeq()
+        {
+            return seq_;
+        }
+
         void setContextMessageCallback(const ContextMessageCallback &cb)
         {
             contextMessageCallback = cb;
@@ -89,6 +94,7 @@ class ChatContext
         const static int timeLen = 8;
         int32_t length;
         std::string code_;          //状态码
+        std::string seq_;           //消息序列号
         std::string sender_;        //发送消息的人
         std::string recver_;        //收消息的人
         std::string time_;          //发送时间戳
