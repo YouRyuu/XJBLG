@@ -1,7 +1,0 @@
-.idea/
-.vscode/
-cmake-build-debug/
-*.dSYM/
-main
-CMakeLists.txt
-main.cpp
