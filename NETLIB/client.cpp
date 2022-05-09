@@ -22,20 +22,6 @@
 #include "application/http/HttpServer.h"
 #include "application/http/HttpRequest.h"
 
-// void messageCallback(const TcpConnectionPtr &conn,
-//                            Buffer *buf, int n)
-// {
-//     printf("-----onMessage:recv %d bytes from [%s]:\n%s-------\n", n, conn->name().c_str(), buf->getAllStringFromBuffer().c_str());
-//     buf->retrieveAll();
-// }
-
-// void connectionCallback(const TcpConnectionPtr &conn)
-// {
-//     Buffer buf;
-//     buf.append("GET / HTTP/1.1\r\n");
-//     conn->send(&buf);
-// }
-
 int main(int argc, char *argv[])
 {
     if (argc > 2)
