@@ -8,7 +8,7 @@
 
 #define HOST "tcp://127.0.0.1:3306/IM"
 #define USER "root"
-#define PASSWORD ""
+#define PASSWORD "o"
 
 class MysqlDB
 {
@@ -29,6 +29,7 @@ class MysqlDB
 
     ResultSetPtr execute(std::string sqlMent)
     {
+        //std::cout<<sqlMent<<std::endl;
         if(stmt->execute(sqlMent))      //select操作execute返回true,反之返回false
         {
             resultSetPtr.reset(stmt->getResultSet());

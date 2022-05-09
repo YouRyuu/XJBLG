@@ -1,20 +1,17 @@
-#include "mysqlDB.h"
+//#include "mysqlDB.h"
+#include "../function.h"
+#include <unistd.h>
 #include <iostream>
+#include <vector>
 int main()
 {
-    MysqlDB db;
-    MysqlDB::ResultSetPtr res;
-    std::string userid("11111112");
-    std::string password("bmniubi");
-    std::string sql("select userid from users where userid=\"");
-    sql = sql + userid;
-    sql = sql + "\" and password=\"";
-    sql = sql + password + "\"";
-    std::cout<<sql<<std::endl;
-    res = db.execute(sql);
-    printf("row:%ld\n", res->rowsCount());
-    while(res->next())
+    //srand((unsigned int)time(NULL));
+    for(int i=0; i<10; ++i)
     {
-        printf("userid:%s\n", res->getString("userid").c_str());
+        //std::cout<<time(NULL)<<std::endl;
+    std::cout<<getSeq()<<std::endl;
+    //sleep(1);
     }
+
+    return 0;
 }
