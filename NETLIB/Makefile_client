@@ -3,7 +3,7 @@ objs = Acceptor.o Buffer.o Channel.o CountDownLatch.o CurrentThread.o \
 Epoll.o Eventloop.o EventLoopThread.o EventLoopThreadPool.o HttpContext.o \
 HttpResponse.o HttpServer.o InetAddress.o client.o Socket.o SocketsOps.o \
 TcpConnection.o TcpServer.o Thread.o ThreadPool.o Connector.o ChatContext.o \
-ChatClient.o TcpClient.o
+ChatClient.o TcpClient.o function.o
 
 server:$(objs)
 	g++ -g -o client $(objs) -std=c++11 -lpthread
@@ -33,6 +33,7 @@ Connector.o:Connector.h InetAddress.h Channel.h Eventloop.h SocketsOps.h
 ChatContext.o:ChatContext.h Buffer.h Endian.h TcpConnection.h
 ChatClient.o:Callbacks.h Mutex.h TcpClient.h ChatContext.h Eventloop.h ChatClient.h
 TcpClient.o:Mutex.h TcpConnection.h Connector.h Eventloop.h SocketsOps.h
+function.o:function.h
 
 .PHONY : clean
 clean:
