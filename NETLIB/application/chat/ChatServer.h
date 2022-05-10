@@ -14,6 +14,7 @@
 #include "../../net/Callbacks.h"
 #include "ChatContext.h"
 #include "../../net/TcpServer.h"
+#include "../../redis/redisDB.h"
 #include <set>
 #include <stdio.h>
 #include <unistd.h>
@@ -60,7 +61,6 @@ public:
     void doOnlineNotifyAction(std::string userID);
     void doDeleteFriendAction(const TcpConnectionPtr &conn, std::string userID, std::string deleteID);
     void doAckAction(std::string seq);
-    void doOvertimeAction(std::string seq);
 
     //服务端内部逻辑相关函数
     bool getUserState(std::string userId);
@@ -70,7 +70,6 @@ public:
     FriendState checkIsFriend(std::string user1ID, std::string user2ID);
     bool agreeRequestOfAddFriend(std::string userID, std::string applyID);
     void insertMessageToWindow(std::string seq, std::string recver, std::string message);
-    void deleteMessageFromWindow(std::string seq);
     bool loginValid(const std::string userid, const std::string password);
     bool checkUserIsExist(std::string userID);
     void printNowMessageWindow();
@@ -95,6 +94,7 @@ private:
     ChatContext chatContext_;
     UserModel userModel_;
     JsonItem jsonItem_;
+    RedisDB redis_;
 };
 
 #endif
