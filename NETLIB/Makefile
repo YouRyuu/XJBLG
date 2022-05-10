@@ -1,12 +1,12 @@
-VPATH=./net:./application/chat:./application/http:./mysql
+VPATH=./net:./application/chat:./application/http:./mysql:./redis
 objs = Acceptor.o Buffer.o Channel.o CountDownLatch.o CurrentThread.o \
 Epoll.o Eventloop.o EventLoopThread.o EventLoopThreadPool.o HttpContext.o \
 HttpResponse.o HttpServer.o InetAddress.o main.o Socket.o SocketsOps.o \
 TcpConnection.o TcpServer.o Thread.o ThreadPool.o Connector.o ChatContext.o \
-ChatServer.o ChatModel.o function.o TimeQueue.o Timer.o Timestamp.o
+ChatServer.o ChatModel.o function.o TimeQueue.o Timer.o Timestamp.o redisDB.o
 
 server:$(objs)
-	g++ -g -o server $(objs) -std=c++11 -lmysqlcppconn -lpthread
+	g++ -g -o server $(objs) -std=c++11 -lmysqlcppconn -lredis++ -lhiredis -lpthread
 
 main.o:InetAddress.h Socket.h Eventloop.h Acceptor.h TcpConnection.h TcpServer.h Buffer.h StringPiece.h ThreadPool.h CurrentThread.h HttpResponse.h HttpServer.h HttpRequest.h
 Acceptor.o:Channel.h Socket.h Acceptor.h Eventloop.h InetAddress.h SocketsOps.h
@@ -33,9 +33,10 @@ Timer.o:Timer.h Timestamp.h Callbacks.h
 TimeQueue.o:TimeQueue.h Mutex.h Callbacks.h Channel.h Eventloop.h Timer.h TimerID.h
 Connector.o:Connector.h InetAddress.h Channel.h Eventloop.h SocketsOps.h
 ChatContext.o:ChatContext.h Buffer.h Endian.h TcpConnection.h function.h
-ChatServer.o:Mutex.h Callbacks.h ChatContext.h ChatServer.h Eventloop.h TcpServer.h ChatContext.h Buffer.h mysqlDB.h
+ChatServer.o:Mutex.h Callbacks.h ChatContext.h ChatServer.h Eventloop.h TcpServer.h ChatContext.h Buffer.h mysqlDB.h redisDB.h
 ChatModel.o:ChatModel.h mysqlDB.h
 function.o:function.h
+redisDB.o:redisDB.h
 .PHONY : clean
 clean:
 	rm $(objs)
